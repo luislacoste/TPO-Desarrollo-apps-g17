@@ -1,0 +1,12 @@
+https://colorhunt.co/palette/f6f1f1afd3e219a7ce146c94
+
+
+
+rgb(246, 241, 241)
+#F6F1F1
+rgb(20, 108, 148)
+#146C94
+rgb(25, 167, 206)
+#19A7CE
+rgb(175, 211, 226)
+#AFD3E2
