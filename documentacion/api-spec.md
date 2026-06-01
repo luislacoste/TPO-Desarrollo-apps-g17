@@ -146,6 +146,16 @@ Reglas documentadas en spec: mínimo ~1% sobre oferta actual; máximo ~20% sobre
 | POST | `/payments/{id}/pay` | Bearer | Procesar pago |
 | GET | `/payments/invoices` | Bearer | Mis facturas |
 
+### Fines (Multas por impago)
+
+Si el comprador no paga, el sistema genera una **multa del 10% sobre el valor ofertado** y le deja al usuario **72 hs** (`Fine.deadlineAt`) para regularizar. Mientras la multa está vigente el usuario queda con `bidsBlocked: true` (no puede pujar). Vencidas las 72 hs, la multa pasa a `overdue` y el usuario queda con `admissionStatus: blocked`.
+
+| Método | Ruta | Auth | Resumen |
+|--------|------|------|---------|
+| GET | `/fines` | Bearer | Listar mis multas (filtro `status`) |
+| GET | `/fines/{id}` | Bearer | Detalle de multa |
+| POST | `/fines/{id}/pay` | Bearer | Regularizar multa pagando (levanta `bidsBlocked` si está dentro de las 72 hs) |
+
 ### Admin
 
 Endpoints internos para personal de la empresa. **Todos requieren JWT con `role: admin`**; un token con `role: user` recibe `403 Forbidden`.
@@ -158,6 +168,11 @@ Endpoints internos para personal de la empresa. **Todos requieren JWT con `role:
 | POST | `/admin/users/{id}/reject` | Bearer (admin) | Rechazar usuario (motivo obligatorio) |
 | PATCH | `/admin/users/{id}/category` | Bearer (admin) | Asignar/cambiar categoría (`bronce`, `plata`, `oro`, `platino`) |
 | PATCH | `/admin/users/{id}/admission` | Bearer (admin) | Cambiar estado de admisión (`pending`, `approved`, `rejected`, `blocked`, `suspended`) |
+| GET | `/admin/fines` | Bearer (admin) | Listar multas de toda la plataforma (filtros: `status`, `userId`) |
+| POST | `/admin/payments/{id}/apply-fine` | Bearer (admin) | Aplicar multa del 10% sobre un pago impago (manual) |
+| POST | `/admin/fines/{id}/waive` | Bearer (admin) | Condonar una multa (motivo obligatorio) |
+| POST | `/admin/users/{id}/block-participation` | Bearer (admin) | Bloquear pujas/participación del usuario |
+| POST | `/admin/users/{id}/unblock-participation` | Bearer (admin) | Habilitar participación (falla si hay multas vigentes) |
 
 ---
 
@@ -168,7 +183,9 @@ Endpoints internos para personal de la empresa. **Todos requieren JWT con `role:
 | `UserCategory` | `bronce` \| `plata` \| `oro` \| `platino` |
 | `UserRole` | `user` \| `admin` |
 | `AdmissionStatus` | `pending` \| `approved` \| `rejected` \| `blocked` \| `suspended` |
-| `User` | Perfil base (incluye `role`, `admissionStatus`, `admissionNotes`) |
+| `User` | Perfil base (incluye `role`, `admissionStatus`, `admissionNotes`, `bidsBlocked`) |
+| `FineStatus` | `pending` \| `paid` \| `overdue` \| `waived` |
+| `Fine` | Multa del 10% por impago, con `deadlineAt = issuedAt + 72h` |
 | `UserMetrics` | Subastas, pujas, gasto, rating, etc. |
 | `Category` | Categoría con beneficios y requisitos |
 | `PaymentMethod` | `credit_card` \| `bank_account` \| `certified_check` |

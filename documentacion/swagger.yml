@@ -41,6 +41,24 @@ info:
     | rejected | Rechazado por un admin (ver `admissionNotes`) |
     | blocked | Bloqueado por incumplimiento (ej. impago) |
     | suspended | Suspendido temporalmente |
+
+    ### Flujo de multas e impago
+    1. Si el usuario gana una subasta y **no paga antes de la fecha
+       límite** del `Payment`, este pasa a `status: overdue` y el sistema
+       genera automáticamente una **multa del 10% sobre el valor ofertado**
+       (schema `Fine`).
+    2. Al emitirse la multa el usuario queda con `bidsBlocked: true`
+       (no puede pujar ni participar en subastas nuevas) y dispone de
+       **72 horas** (`Fine.deadlineAt`) para regularizar pagando.
+    3. Si paga dentro de las 72 hs (`POST /fines/{id}/pay`), la multa
+       pasa a `status: paid` y se restablece automáticamente
+       `bidsBlocked: false`.
+    4. Si vencen las 72 hs sin pago, la multa pasa a `status: overdue`,
+       el usuario queda con `admissionStatus: blocked` (bloqueo total
+       de la cuenta) y se deriva al circuito judicial.
+    5. Un admin puede aplicar manualmente una multa, bloquear/desbloquear
+       la participación o condonar la multa (`waive`) desde los
+       endpoints del tag **Admin**.
   contact:
     name: SubastAR Support
     email: api@subastar.com
@@ -84,6 +102,8 @@ tags:
     description: Métricas
   - name: Payments
     description: Pagos
+  - name: Fines
+    description: Multas por impago (10% sobre la oferta, plazo de 72hs)
   - name: Admin
     description: Endpoints administrativos (rol admin requerido)
 
@@ -1434,6 +1454,90 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  # ─── FINES ─────────────────────────────────────────────────────────────────
+  # Multas por impago: 10% sobre la oferta, plazo de 72hs para regularizar.
+  # Mientras hay una multa `pending`, el usuario tiene `bidsBlocked: true`.
+
+  /fines:
+    get:
+      tags: [Fines]
+      summary: Listar mis multas
+      description: |
+        Listado de multas asociadas al usuario autenticado.
+        Permite filtrar por estado.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/FineStatus"
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryLimit"
+      responses:
+        "200":
+          description: Listado de multas
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Fine"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /fines/{id}:
+    get:
+      tags: [Fines]
+      summary: Detalle de multa
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Detalle de la multa
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fine"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /fines/{id}/pay:
+    post:
+      tags: [Fines]
+      summary: Regularizar multa (pagar)
+      description: |
+        Paga la multa vigente y, si el pago se realiza dentro de las 72hs
+        (`deadlineAt`), levanta automáticamente `bidsBlocked` en el usuario.
+        Si la multa ya está `overdue`, la operación devuelve `409`.
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentMethodId]
+              properties:
+                paymentMethodId:
+                  type: string
+      responses:
+        "200":
+          description: Multa regularizada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fine"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Multa vencida o ya regularizada (transición no permitida)
+
   # ─── ADMIN ─────────────────────────────────────────────────────────────────
   # Endpoints internos para personal de la empresa. Todos requieren JWT con
   # `role: admin`; un token con `role: user` recibe 403 Forbidden.
@@ -1672,6 +1776,201 @@ paths:
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 
+  /admin/fines:
+    get:
+      tags: [Admin]
+      summary: Listar multas (admin)
+      description: Listado paginado de multas de toda la plataforma. Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryLimit"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/FineStatus"
+        - name: userId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Listado de multas
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page: { type: integer }
+                  limit: { type: integer }
+                  total: { type: integer }
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Fine"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+
+  /admin/payments/{id}/apply-fine:
+    post:
+      tags: [Admin]
+      summary: Aplicar multa por impago a un pago
+      description: |
+        Genera una multa del 10% sobre el valor ofertado del pago indicado.
+        El sistema crea el `Fine` con `status: pending`, fija
+        `deadlineAt = now + 72h` y marca al usuario con `bidsBlocked: true`.
+        Normalmente esta operación se dispara automáticamente al vencer un
+        `Payment`; este endpoint permite ejecutarla manualmente desde el
+        panel admin. Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                finePercentage:
+                  type: number
+                  default: 10
+                  description: Por defecto 10 según la consigna; override solo para casos excepcionales
+                notes:
+                  type: string
+      responses:
+        "201":
+          description: Multa creada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fine"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: El pago no admite multa (ya pagado, ya tiene multa, etc.)
+
+  /admin/fines/{id}/waive:
+    post:
+      tags: [Admin]
+      summary: Condonar multa
+      description: |
+        Marca una multa como `waived` (no se cobra). Levanta el bloqueo
+        de participación si era la única multa vigente. Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+      responses:
+        "200":
+          description: Multa condonada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Fine"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: La multa no está en un estado que admita condonación
+
+  /admin/users/{id}/block-participation:
+    post:
+      tags: [Admin]
+      summary: Bloquear participación del usuario
+      description: |
+        Marca `bidsBlocked: true` para impedir que el usuario puje o
+        participe en subastas. Se usa típicamente cuando se aplica una
+        multa por impago, pero puede invocarse manualmente.
+        Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  description: Ej. `unpaid_fine`, `under_investigation`, etc.
+                  minLength: 1
+                until:
+                  type: string
+                  format: date-time
+                  description: Fecha de fin del bloqueo (opcional)
+      responses:
+        "200":
+          description: Participación bloqueada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/users/{id}/unblock-participation:
+    post:
+      tags: [Admin]
+      summary: Desbloquear participación del usuario
+      description: |
+        Restablece `bidsBlocked: false`. Falla con 409 si el usuario tiene
+        multas con `status: pending` u `overdue` sin regularizar.
+        Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                notes:
+                  type: string
+      responses:
+        "200":
+          description: Participación habilitada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: El usuario tiene multas vigentes/vencidas sin regularizar
+
 # ─── COMPONENTS ──────────────────────────────────────────────────────────────
 
 components:
@@ -1815,6 +2114,16 @@ components:
         admissionUpdatedBy:
           type: string
           description: ID del admin que modificó por última vez el estado
+        bidsBlocked:
+          type: boolean
+          description: Bloqueo temporal para pujar/participar (impago con multa vigente)
+        bidsBlockedReason:
+          type: string
+          description: Motivo del bloqueo de participación (ej. `unpaid_fine`)
+        bidsBlockedUntil:
+          type: string
+          format: date-time
+          description: Fecha límite del bloqueo (típicamente `Fine.deadlineAt`)
         createdAt:
           type: string
           format: date-time
@@ -2089,10 +2398,18 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, processing, completed, failed]
+          description: >-
+            `overdue` indica que se venció el plazo de pago y dispara la
+            generación automática de una multa (schema `Fine`).
+            `defaulted` indica impago confirmado tras vencer también el
+            plazo de 72hs de la multa.
+          enum: [pending, processing, completed, failed, overdue, defaulted]
         dueDate:
           type: string
           format: date
+        fineId:
+          type: string
+          description: ID de la multa generada en caso de impago (si corresponde)
 
     PaymentDetail:
       allOf:
@@ -2131,6 +2448,67 @@ components:
           type: string
           format: date-time
         downloadUrl:
+          type: string
+
+    FineStatus:
+      type: string
+      description: >-
+        Estado de la multa.
+        `pending` = vigente, dentro del plazo de 72hs;
+        `paid` = regularizada;
+        `overdue` = vencida (cuenta queda bloqueada y se deriva a circuito judicial);
+        `waived` = condonada por un admin.
+      enum: [pending, paid, overdue, waived]
+
+    Fine:
+      type: object
+      description: >-
+        Multa del 10% sobre el valor ofertado, aplicada cuando el
+        comprador no paga la subasta ganada en el plazo previsto.
+        El usuario tiene 72hs (`deadlineAt`) desde `issuedAt` para regularizar.
+      properties:
+        id:
+          type: string
+        userId:
+          type: string
+        paymentId:
+          type: string
+          description: Pago original que disparó la multa
+        auctionId:
+          type: string
+        itemId:
+          type: string
+        bidAmount:
+          type: number
+          description: Valor ofertado tomado como base para el cálculo
+        finePercentage:
+          type: number
+          description: Porcentaje aplicado (por consigna, 10)
+          example: 10
+        amount:
+          type: number
+          description: Monto de la multa (10% sobre `bidAmount`)
+        currency:
+          type: string
+        status:
+          $ref: "#/components/schemas/FineStatus"
+        issuedAt:
+          type: string
+          format: date-time
+        deadlineAt:
+          type: string
+          format: date-time
+          description: Fecha límite para pagar la multa (issuedAt + 72hs)
+        paidAt:
+          type: string
+          format: date-time
+        waivedAt:
+          type: string
+          format: date-time
+        waivedBy:
+          type: string
+          description: ID del admin que condonó la multa
+        waivedReason:
           type: string
 
     Pagination:
