@@ -113,6 +113,9 @@ paths:
     post:
       tags: [Auth]
       summary: Registro inicial de usuario
+      description: |
+        Primera etapa del registro. Todos los campos son obligatorios
+        para crear el usuario en estado pendiente de verificación.
       security: []
       requestBody:
         required: true
@@ -120,19 +123,25 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, firstName, lastName]
+              required: [email, firstName, lastName, domicilio, pais]
               properties:
                 email:
                   type: string
                   format: email
                 firstName:
                   type: string
+                  minLength: 1
                 lastName:
                   type: string
+                  minLength: 1
                 domicilio:
                   type: string
+                  minLength: 1
+                  description: Domicilio completo del usuario (calle, número, ciudad)
                 pais:
                   type: string
+                  minLength: 2
+                  description: País de residencia (nombre o código ISO 3166-1 alpha-2)
       responses:
         "201":
           description: Registro iniciado
@@ -153,7 +162,12 @@ paths:
   /auth/register/document:
     post:
       tags: [Auth]
-      summary: Subir documento de identidad
+      summary: Subir documento de identidad (frente y dorso)
+      description: |
+        Recibe las dos caras del documento de identidad como archivos
+        independientes. Ambos archivos son obligatorios.
+        Formatos aceptados: image/jpeg, image/png, application/pdf.
+        Tamaño máximo por archivo: 5 MB.
       security: []
       requestBody:
         required: true
@@ -161,18 +175,46 @@ paths:
           multipart/form-data:
             schema:
               type: object
-              required: [userId, document]
+              required: [userId, documentFront, documentBack]
               properties:
                 userId:
                   type: string
-                document:
+                  description: ID del usuario obtenido en POST /auth/register
+                documentFront:
                   type: string
                   format: binary
+                  description: Imagen/PDF del frente del documento
+                documentBack:
+                  type: string
+                  format: binary
+                  description: Imagen/PDF del dorso del documento
+            encoding:
+              documentFront:
+                contentType: image/jpeg, image/png, application/pdf
+              documentBack:
+                contentType: image/jpeg, image/png, application/pdf
       responses:
         "200":
-          description: Documento recibido
+          description: Documentos recibidos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: string
+                  documentFrontId:
+                    type: string
+                  documentBackId:
+                    type: string
+                  message:
+                    type: string
         "400":
           $ref: "#/components/responses/BadRequest"
+        "413":
+          description: Archivo demasiado grande (límite 5 MB por cara)
+        "415":
+          description: Formato de archivo no soportado
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 

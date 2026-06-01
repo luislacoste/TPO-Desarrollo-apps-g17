@@ -29,8 +29,8 @@ Authorization: Bearer <token>
 | Método | Ruta | Resumen |
 |--------|------|---------|
 | POST | `/auth/login` | Iniciar sesión |
-| POST | `/auth/register` | Registro inicial de usuario |
-| POST | `/auth/register/document` | Subir documento de identidad (multipart) |
+| POST | `/auth/register` | Registro inicial de usuario (campos obligatorios: `email`, `firstName`, `lastName`, `domicilio`, `pais`) |
+| POST | `/auth/register/document` | Subir documento de identidad - frente y dorso (multipart: `documentFront`, `documentBack`) |
 | POST | `/auth/register/complete` | Completar registro con contraseña |
 | POST | `/auth/forgot-password` | Solicitar recuperación de contraseña |
 | POST | `/auth/refresh-token` | Renovar token de acceso |
