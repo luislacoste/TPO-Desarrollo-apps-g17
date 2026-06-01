@@ -42,6 +42,32 @@ info:
     | blocked | Bloqueado por incumplimiento (ej. impago) |
     | suspended | Suspendido temporalmente |
 
+    ### Flujo de venta (estados de `SellRequest`)
+    Transiciones del modelo `SellRequest` (`status`):
+
+    ```
+    pending  ──►  reviewing  ──►  rejected_by_company        (terminal)
+                              └─► conditions_offered  ──►  accepted          (va a subasta)
+                                                       └─► conditions_rejected ──► returning ──► returned (terminal)
+    ```
+
+    - `pending`: solicitud enviada por el usuario, aún sin revisar.
+    - `reviewing`: la empresa está inspeccionando el objeto.
+    - `rejected_by_company`: la empresa rechazó el ítem
+      (motivo en `rejectionReason`, consultable vía
+      `GET /sell/my-requests/{id}/rejection-reason`).
+    - `conditions_offered`: la empresa propone condiciones (precio base,
+      comisión, etc.) en el campo `conditions`. El usuario debe aceptar
+      o rechazar.
+    - `accepted`: el usuario aceptó las condiciones; el objeto se
+      incorpora a una futura subasta.
+    - `conditions_rejected`: el usuario rechazó las condiciones
+      (`POST /sell/my-requests/{id}/reject`). Se calcula el costo de
+      devolución y queda disponible en
+      `GET /sell/my-requests/{id}/return-cost`.
+    - `returning`: el objeto está siendo devuelto al usuario.
+    - `returned`: devolución completada (estado terminal).
+
     ### Flujo de multas e impago
     1. Si el usuario gana una subasta y **no paga antes de la fecha
        límite** del `Payment`, este pasa a `status: overdue` y el sistema
@@ -1085,17 +1111,129 @@ paths:
     put:
       tags: [Sell Requests]
       summary: Aceptar condiciones de venta
+      description: |
+        Acepta las condiciones propuestas por la empresa.
+        Solo válido cuando `status: conditions_offered`. Transiciona a
+        `accepted` y el objeto pasa a integrar una próxima subasta.
       parameters:
         - $ref: "#/components/parameters/PathId"
       responses:
         "200":
           description: Condiciones aceptadas
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellRequestDetail"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+
+  /sell/my-requests/{id}/reject:
+    post:
+      tags: [Sell Requests]
+      summary: Rechazar condiciones de venta
+      description: |
+        El vendedor rechaza las condiciones (precio base, comisión, etc.)
+        propuestas por la empresa. Solo válido cuando
+        `status: conditions_offered`.
+        Tras el rechazo:
+        - `status` pasa a `conditions_rejected`.
+        - `rejectionReason` queda registrado con `rejectionBy: user`.
+        - Se calcula `returnCost` (consultable en
+          `GET /sell/my-requests/{id}/return-cost`).
+        - El objeto se programa para devolución (`returning`).
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  description: Motivo del rechazo informado por el vendedor
+      responses:
+        "200":
+          description: Condiciones rechazadas; devolución programada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SellRequestDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: La solicitud no está en `conditions_offered`
+
+  /sell/my-requests/{id}/rejection-reason:
+    get:
+      tags: [Sell Requests]
+      summary: Motivo de rechazo de la solicitud
+      description: |
+        Devuelve el motivo de rechazo cuando la solicitud fue rechazada
+        (sea por la empresa, `rejected_by_company`, o por el vendedor al
+        rechazar las condiciones, `conditions_rejected`).
+        Responde `409` si la solicitud no está en un estado rechazado.
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Motivo de rechazo
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [rejectionBy, reason, rejectedAt]
+                properties:
+                  rejectionBy:
+                    type: string
+                    enum: [company, user]
+                  reason:
+                    type: string
+                  rejectedAt:
+                    type: string
+                    format: date-time
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: La solicitud no está rechazada
+
+  /sell/my-requests/{id}/return-cost:
+    get:
+      tags: [Sell Requests]
+      summary: Costo de devolución del objeto
+      description: |
+        Devuelve el costo de devolución calculado para el objeto, aplicable
+        cuando el vendedor rechazó las condiciones (`conditions_rejected`)
+        y el objeto debe volver a su domicilio.
+        Responde `409` si la solicitud no requiere devolución.
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Costo de devolución
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReturnCost"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: La solicitud no está en un estado que requiera devolución
 
   # ─── MY ITEMS ──────────────────────────────────────────────────────────────
 
@@ -2290,6 +2428,26 @@ components:
           type: string
           format: date-time
 
+    SellRequestStatus:
+      type: string
+      description: >-
+        Estado de la solicitud de venta. Ver "Flujo de venta" en la
+        descripción general para el diagrama de transiciones.
+        Valores legacy `approved` y `rejected` se mantienen por
+        compatibilidad y equivalen a `conditions_offered` y
+        `rejected_by_company`, respectivamente.
+      enum:
+        - pending
+        - reviewing
+        - rejected_by_company
+        - conditions_offered
+        - accepted
+        - conditions_rejected
+        - returning
+        - returned
+        - approved
+        - rejected
+
     SellRequest:
       type: object
       properties:
@@ -2298,11 +2456,51 @@ components:
         title:
           type: string
         status:
-          type: string
-          enum: [pending, reviewing, approved, rejected, accepted]
+          $ref: "#/components/schemas/SellRequestStatus"
         createdAt:
           type: string
           format: date-time
+
+    SellRequestConditions:
+      type: object
+      description: Condiciones propuestas por la empresa al vendedor
+      properties:
+        basePrice:
+          type: number
+          description: Precio base de la subasta
+        commissionPercentage:
+          type: number
+          description: Comisión de la empresa (porcentaje sobre el precio final)
+        currency:
+          type: string
+        notes:
+          type: string
+        offeredAt:
+          type: string
+          format: date-time
+
+    ReturnCost:
+      type: object
+      description: Costo estimado de devolución cuando el vendedor rechaza las condiciones
+      properties:
+        amount:
+          type: number
+        currency:
+          type: string
+        breakdown:
+          type: object
+          properties:
+            shipping:
+              type: number
+            handling:
+              type: number
+            insurance:
+              type: number
+        estimatedDeliveryDate:
+          type: string
+          format: date
+        carrier:
+          type: string
 
     SellRequestDetail:
       allOf:
@@ -2316,11 +2514,23 @@ components:
               items:
                 type: string
             conditions:
-              type: string
+              $ref: "#/components/schemas/SellRequestConditions"
             estimatedValue:
               type: number
             currency:
               type: string
+            rejectionReason:
+              type: string
+              description: Motivo de rechazo (empresa o usuario, según `rejectionBy`)
+            rejectionBy:
+              type: string
+              enum: [company, user]
+              description: Quién originó el rechazo
+            rejectionAt:
+              type: string
+              format: date-time
+            returnCost:
+              $ref: "#/components/schemas/ReturnCost"
 
     MyItem:
       type: object

@@ -102,7 +102,13 @@ Reglas documentadas en spec: mínimo ~1% sobre oferta actual; máximo ~20% sobre
 | POST | `/sell/request` | Bearer | Solicitar venta (multipart, mín. 6 imágenes, declaración de titularidad) |
 | GET | `/sell/my-requests` | Bearer | Mis solicitudes |
 | GET | `/sell/my-requests/{id}` | Bearer | Detalle |
-| PUT | `/sell/my-requests/{id}/accept` | Bearer | Aceptar condiciones de venta |
+| PUT | `/sell/my-requests/{id}/accept` | Bearer | Aceptar condiciones de venta (transición → `accepted`) |
+| POST | `/sell/my-requests/{id}/reject` | Bearer | Rechazar condiciones (motivo obligatorio; transición → `conditions_rejected`) |
+| GET | `/sell/my-requests/{id}/rejection-reason` | Bearer | Consultar motivo de rechazo (empresa o vendedor) |
+| GET | `/sell/my-requests/{id}/return-cost` | Bearer | Consultar costo de devolución del objeto |
+
+**Transiciones de `SellRequest.status`** (`pending → reviewing → {rejected_by_company | conditions_offered → {accepted | conditions_rejected → returning → returned}}`). Detalle en `swagger.yml` (sección "Flujo de venta").
+
 
 ### My Items — Artículos del usuario
 
@@ -192,7 +198,10 @@ Endpoints internos para personal de la empresa. **Todos requieren JWT con `role:
 | `Auction` / `AuctionDetail` | Subasta y detalle ampliado |
 | `Item` / `ItemDetail` | Ítem en catálogo y detalle |
 | `Bid` | Puja con estado |
-| `SellRequest` / `SellRequestDetail` | Solicitud de venta |
+| `SellRequest` / `SellRequestDetail` | Solicitud de venta (detalle incluye `conditions`, `rejectionReason`, `rejectionBy`, `returnCost`) |
+| `SellRequestStatus` | `pending` \| `reviewing` \| `rejected_by_company` \| `conditions_offered` \| `accepted` \| `conditions_rejected` \| `returning` \| `returned` (`approved`/`rejected` legacy) |
+| `SellRequestConditions` | Precio base, comisión, moneda, notas, `offeredAt` |
+| `ReturnCost` | Costo de devolución con breakdown (envío, handling, seguro) |
 | `MyItem` / `MyItemDetail` | Ítem del vendedor |
 | `Notification` / `NotificationSettings` | Notificaciones |
 | `Payment` / `PaymentDetail` | Pagos y desglose |
