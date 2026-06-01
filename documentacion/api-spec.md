@@ -146,14 +146,29 @@ Reglas documentadas en spec: mínimo ~1% sobre oferta actual; máximo ~20% sobre
 | POST | `/payments/{id}/pay` | Bearer | Procesar pago |
 | GET | `/payments/invoices` | Bearer | Mis facturas |
 
+### Admin
+
+Endpoints internos para personal de la empresa. **Todos requieren JWT con `role: admin`**; un token con `role: user` recibe `403 Forbidden`.
+
+| Método | Ruta | Auth | Resumen |
+|--------|------|------|---------|
+| GET | `/admin/users` | Bearer (admin) | Listado paginado de usuarios (filtros: `admissionStatus`, `category`, `search`) |
+| GET | `/admin/users/{id}` | Bearer (admin) | Detalle del usuario con datos de admisión |
+| POST | `/admin/users/{id}/approve` | Bearer (admin) | Aprobar usuario pendiente (puede asignar categoría inicial) |
+| POST | `/admin/users/{id}/reject` | Bearer (admin) | Rechazar usuario (motivo obligatorio) |
+| PATCH | `/admin/users/{id}/category` | Bearer (admin) | Asignar/cambiar categoría (`bronce`, `plata`, `oro`, `platino`) |
+| PATCH | `/admin/users/{id}/admission` | Bearer (admin) | Cambiar estado de admisión (`pending`, `approved`, `rejected`, `blocked`, `suspended`) |
+
 ---
 
 ## Esquemas (`components.schemas`)
 
 | Nombre | Uso breve |
 |--------|-----------|
-| `UserCategory` | `comun` \| `especial` \| `plata` \| `oro` \| `platino` |
-| `User` | Perfil base |
+| `UserCategory` | `bronce` \| `plata` \| `oro` \| `platino` |
+| `UserRole` | `user` \| `admin` |
+| `AdmissionStatus` | `pending` \| `approved` \| `rejected` \| `blocked` \| `suspended` |
+| `User` | Perfil base (incluye `role`, `admissionStatus`, `admissionNotes`) |
 | `UserMetrics` | Subastas, pujas, gasto, rating, etc. |
 | `Category` | Categoría con beneficios y requisitos |
 | `PaymentMethod` | `credit_card` \| `bank_account` \| `certified_check` |

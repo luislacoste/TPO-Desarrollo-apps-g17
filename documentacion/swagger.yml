@@ -19,11 +19,28 @@ info:
     ### Categorías de usuario
     | Categoría | Rol |
     |-----------|-----|
-    | Común | Acceso básico a subastas públicas |
-    | Especial | Subastas especiales |
+    | Bronce | Acceso básico a subastas públicas |
     | Plata | Beneficios extra, límite de pujas mayor |
     | Oro | Cheques certificados, subastas exclusivas |
     | Platino | Acceso completo, sin límites de reglas estándar |
+
+    ### Roles y permisos
+    | Rol | Descripción |
+    |-----|-------------|
+    | user | Usuario estándar autenticado |
+    | admin | Personal de la empresa: aprueba/rechaza usuarios, asigna categoría y modifica el estado de admisión |
+
+    Los endpoints del tag **Admin** requieren JWT con `role: admin`.
+    Responderán `403 Forbidden` si el token pertenece a un usuario sin ese rol.
+
+    ### Estados de admisión del usuario
+    | Estado | Descripción |
+    |--------|-------------|
+    | pending | Registro iniciado, pendiente de revisión |
+    | approved | Aprobado por un admin, puede operar |
+    | rejected | Rechazado por un admin (ver `admissionNotes`) |
+    | blocked | Bloqueado por incumplimiento (ej. impago) |
+    | suspended | Suspendido temporalmente |
   contact:
     name: SubastAR Support
     email: api@subastar.com
@@ -67,6 +84,8 @@ tags:
     description: Métricas
   - name: Payments
     description: Pagos
+  - name: Admin
+    description: Endpoints administrativos (rol admin requerido)
 
 paths:
   # ─── AUTH ──────────────────────────────────────────────────────────────────
@@ -1415,6 +1434,244 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  # ─── ADMIN ─────────────────────────────────────────────────────────────────
+  # Endpoints internos para personal de la empresa. Todos requieren JWT con
+  # `role: admin`; un token con `role: user` recibe 403 Forbidden.
+
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: Listar usuarios (admin)
+      description: |
+        Listado paginado de usuarios para el panel administrativo.
+        Permite filtrar por estado de admisión, categoría y búsqueda libre.
+        Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/QueryPage"
+        - $ref: "#/components/parameters/QueryLimit"
+        - name: admissionStatus
+          in: query
+          schema:
+            $ref: "#/components/schemas/AdmissionStatus"
+        - name: category
+          in: query
+          schema:
+            $ref: "#/components/schemas/UserCategory"
+        - name: search
+          in: query
+          description: Búsqueda por email, nombre, apellido o DNI
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Listado paginado de usuarios
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  page:
+                    type: integer
+                  limit:
+                    type: integer
+                  total:
+                    type: integer
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+
+  /admin/users/{id}:
+    get:
+      tags: [Admin]
+      summary: Detalle de usuario (admin)
+      description: Vista completa del usuario incluyendo datos de admisión. Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      responses:
+        "200":
+          description: Usuario
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /admin/users/{id}/approve:
+    post:
+      tags: [Admin]
+      summary: Aprobar usuario
+      description: |
+        Aprueba a un usuario en estado `pending`. Cambia
+        `admissionStatus` a `approved` y habilita su operación en la
+        plataforma. Opcionalmente asigna categoría inicial.
+        Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category:
+                  $ref: "#/components/schemas/UserCategory"
+                notes:
+                  type: string
+                  description: Notas internas opcionales
+      responses:
+        "200":
+          description: Usuario aprobado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: El usuario no está en un estado que permita aprobación
+
+  /admin/users/{id}/reject:
+    post:
+      tags: [Admin]
+      summary: Rechazar usuario
+      description: |
+        Rechaza el registro de un usuario. Cambia `admissionStatus` a
+        `rejected` y registra el motivo en `admissionNotes`.
+        Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 1
+                  description: Motivo de rechazo (se muestra al usuario)
+                notes:
+                  type: string
+                  description: Notas internas opcionales
+      responses:
+        "200":
+          description: Usuario rechazado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: El usuario no está en un estado que permita rechazo
+
+  /admin/users/{id}/category:
+    patch:
+      tags: [Admin]
+      summary: Asignar categoría a un usuario
+      description: |
+        Cambia la categoría comercial del usuario
+        (`bronce`, `plata`, `oro`, `platino`). Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category]
+              properties:
+                category:
+                  $ref: "#/components/schemas/UserCategory"
+                reason:
+                  type: string
+                  description: Motivo del cambio (auditoría)
+      responses:
+        "200":
+          description: Categoría asignada
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
+  /admin/users/{id}/admission:
+    patch:
+      tags: [Admin]
+      summary: Cambiar estado de admisión
+      description: |
+        Transiciona el estado de admisión del usuario
+        (`pending`, `approved`, `rejected`, `blocked`, `suspended`).
+        Útil para bloquear/desbloquear/suspender cuentas además del flujo
+        inicial de aprobación. Requiere rol `admin`.
+      x-required-role: admin
+      parameters:
+        - $ref: "#/components/parameters/PathId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [admissionStatus]
+              properties:
+                admissionStatus:
+                  $ref: "#/components/schemas/AdmissionStatus"
+                notes:
+                  type: string
+                  description: Motivo / contexto del cambio de estado
+      responses:
+        "200":
+          description: Estado de admisión actualizado
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/ForbiddenAdmin"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Transición de estado no permitida desde el estado actual
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+
 # ─── COMPONENTS ──────────────────────────────────────────────────────────────
 
 components:
@@ -1466,6 +1723,12 @@ components:
         application/json:
           schema:
             $ref: "#/components/schemas/Error"
+    ForbiddenAdmin:
+      description: Acceso restringido a rol admin
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
     NotFound:
       description: Recurso no encontrado
       content:
@@ -1504,7 +1767,18 @@ components:
 
     UserCategory:
       type: string
-      enum: [comun, especial, plata, oro, platino]
+      enum: [bronce, plata, oro, platino]
+      description: Categoría asignada por la empresa según historial del usuario
+
+    UserRole:
+      type: string
+      enum: [user, admin]
+      description: Rol del usuario para autorización
+
+    AdmissionStatus:
+      type: string
+      enum: [pending, approved, rejected, blocked, suspended]
+      description: Estado de admisión del usuario en la plataforma
 
     User:
       type: object
@@ -1528,6 +1802,19 @@ components:
           type: string
         category:
           $ref: "#/components/schemas/UserCategory"
+        role:
+          $ref: "#/components/schemas/UserRole"
+        admissionStatus:
+          $ref: "#/components/schemas/AdmissionStatus"
+        admissionNotes:
+          type: string
+          description: Motivo de rechazo / bloqueo / suspensión (informado por admin)
+        admissionUpdatedAt:
+          type: string
+          format: date-time
+        admissionUpdatedBy:
+          type: string
+          description: ID del admin que modificó por última vez el estado
         createdAt:
           type: string
           format: date-time
