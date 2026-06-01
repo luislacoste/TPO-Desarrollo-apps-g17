@@ -21,7 +21,7 @@ info:
     |-----------|-----|
     | Bronce | Acceso básico a subastas públicas |
     | Plata | Beneficios extra, límite de pujas mayor |
-    | Oro | Cheques certificados, subastas exclusivas |
+    | Oro | Subastas exclusivas, beneficios premium |
     | Platino | Acceso completo, sin límites de reglas estándar |
 
     ### Roles y permisos
@@ -569,7 +569,11 @@ paths:
   /payment-methods/certified-check:
     post:
       tags: [Payment Methods]
-      summary: Registrar cheque certificado (Oro / Platino)
+      summary: Registrar cheque certificado
+      description: |
+        Registra un cheque certificado como medio de pago. Disponible
+        para cualquier usuario autenticado (no está restringido a
+        categorías Oro/Platino).
       requestBody:
         required: true
         content:
@@ -596,8 +600,6 @@ paths:
                 $ref: "#/components/schemas/PaymentMethod"
         "401":
           $ref: "#/components/responses/Unauthorized"
-        "403":
-          $ref: "#/components/responses/Forbidden"
         "422":
           $ref: "#/components/responses/UnprocessableEntity"
 

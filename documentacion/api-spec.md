@@ -58,7 +58,7 @@ Authorization: Bearer <token>
 | GET | `/payment-methods` | Bearer | Listar medios de pago |
 | POST | `/payment-methods/bank-account` | Bearer | Registrar cuenta bancaria |
 | POST | `/payment-methods/credit-card` | Bearer | Registrar tarjeta |
-| POST | `/payment-methods/certified-check` | Bearer | Registrar cheque certificado (Oro/Platino) |
+| POST | `/payment-methods/certified-check` | Bearer | Registrar cheque certificado (disponible para cualquier categoría) |
 | DELETE | `/payment-methods/{id}` | Bearer | Eliminar medio de pago |
 | GET | `/payment-methods/{id}/status` | Bearer | Estado de verificación |
 
