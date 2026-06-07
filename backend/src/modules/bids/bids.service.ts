@@ -13,6 +13,7 @@ import * as repo from './bids.repository';
 import * as auctionsRepo from '../auctions/auctions.repository';
 import { assertCanParticipate } from '../auctions/auctions.service';
 import { query } from '../../db';
+import { events } from '../../services/events';
 import { Conflict, NotFound, UnprocessableEntity } from '../../utils/errors';
 
 const MIN_INCREMENT_RATIO = 0.01;  // +1% sobre la oferta actual
@@ -75,6 +76,17 @@ export async function placeBid(clienteId: number, input: PlaceBidInput) {
   }
 
   const bidId = await repo.insertBid(asistencia.id, input.itemId, input.importe);
+
+  // Broadcast a los clientes WS suscriptos a la subasta.
+  events.emit('bid_placed', {
+    auctionId:   ctx.subasta_id,
+    itemId:      input.itemId,
+    bidId,
+    importe:     input.importe,
+    clienteId,
+    asistenteId: asistencia.id,
+  });
+
   return {
     id: bidId,
     itemId: input.itemId,

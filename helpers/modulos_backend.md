@@ -278,6 +278,46 @@ la app; restringir más adelante si hace falta).
 
 ---
 
+## WebSocket — Subastas en vivo
+
+**URL:** `ws://localhost:4000/ws/auction/:auctionId`
+(en producción: `wss://api.subastar.com/ws/auction/{auctionId}`)
+
+**Auth:** ninguna. Los eventos son públicos. Las validaciones de quién
+puede pujar siguen estando en `POST /v1/bids`.
+
+**Cómo funciona:**
+- Cada conexión queda asociada a una "sala" identificada por `auctionId`.
+- Los services emiten eventos de dominio en `src/services/events.ts`
+  (un `EventEmitter` singleton). Esto los desacopla del transporte.
+- `src/ws/index.ts` se suscribe a esos eventos y los broadcastea como
+  JSON a todos los clientes de la sala correspondiente.
+
+**Eventos enviados al cliente** (todos llevan `at` ISO y `auctionId`):
+
+| Tipo | Cuándo se emite | Disparador |
+|---|---|---|
+| `hello` | Al conectarse, como ACK. | El propio WS server. |
+| `bid_placed` | Después de un `POST /v1/bids` exitoso. | `bids.service.placeBid` → `events.emit('bid_placed', ...)`. |
+| `bid_accepted` | Igual que `bid_placed`. La API valida antes de aceptar, así que coinciden. | Idem. |
+| `item_sold` | Cuando un item se vende (endpoint admin futuro). | `events.emit('item_sold', ...)`. |
+| `auction_ended` | Cuando una subasta pasa a `cerrada`. | `events.emit('auction_ended', ...)`. |
+| `item_changed` | Cambio de precio/estado/descripción de un item. | `events.emit('item_changed', ...)`. |
+
+**Smoke test rápido con `wscat`:**
+
+```bash
+npm i -g wscat
+wscat -c ws://localhost:4000/ws/auction/1
+# < {"type":"hello","at":"...","auctionId":1,"message":"..."}
+```
+
+Después en otra terminal, hacer un `POST /v1/bids` autenticado para
+el item de esa subasta y debería llegar `{type:"bid_placed",...}` por
+el WS.
+
+---
+
 ## Reglas transversales
 
 Aplicables a todos los módulos del backend:
@@ -303,6 +343,4 @@ Aplicables a todos los módulos del backend:
 
 ## Módulos pendientes
 
-| Módulo | Endpoints aproximados | Notas |
-|---|---|---|
-| **WebSocket** | `wss://.../ws/auction/{id}` | Eventos `bid_placed, bid_accepted, item_sold, auction_ended, item_changed`. Por implementar — único componente del swagger que falta. |
+Backend completo — todos los módulos REST + WebSocket implementados.
