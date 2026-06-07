@@ -201,6 +201,44 @@ Esto cubre la regla del swagger sin necesidad de un job programado.
 
 ---
 
+## Admin (`/v1/admin`) — todos requieren JWT con `role: admin`
+
+Si el JWT tiene `role: user` (o no hay token), `requireRole('admin')`
+responde **`403 ForbiddenAdmin`** (corrección 2.3 del swagger).
+
+### Usuarios
+
+| Método | Path | Qué hace |
+|---|---|---|
+| GET | `/users` | Listado paginado con filtros `admissionStatus`, `category`, `search` (busca en email, first_name, last_name, documento con ILIKE). |
+| GET | `/users/:id` | Detalle completo del usuario con admisión, perfil y participación. |
+| POST | `/users/:id/approve` | Aprueba un usuario `pending`. Body opcional `{ category?, notes? }`. Transiciona admisión a `approved` y sincroniza `clientes.admitido='si'`. Asigna categoría inicial si se pasa. |
+| POST | `/users/:id/reject` | Rechaza un usuario `pending`. Body `{ reason* (obligatorio), notes? }`. Guarda el motivo en `clientes_admision.notas`. |
+| PATCH | `/users/:id/category` | Cambia categoría. Body `{ category, reason? }`. Valida que sea `bronce/plata/oro/platino`. |
+| PATCH | `/users/:id/admission` | Cambia el estado de admisión libremente. Body `{ admissionStatus, notes? }`. Si pasa a `blocked`/`suspended`, también bloquea participación. |
+| POST | `/users/:id/block-participation` | Bloquea participación. Body `{ reason*, until? }`. UPSERT en `clientes_participacion`. |
+| POST | `/users/:id/unblock-participation` | Desbloquea. **409** si el usuario tiene multas `pending` u `overdue` sin regularizar. |
+
+### Multas (lado empresa)
+
+| Método | Path | Qué hace |
+|---|---|---|
+| GET | `/fines` | Listado global paginado, filtros `status`, `userId`. |
+| POST | `/payments/:id/apply-fine` | Aplica multa manual sobre un pago. Body opcional `{ finePercentage?: number=10, notes? }`. En transacción: inserta `multas (pending, deadline=NOW+72h)`, linkea `pagos.fine_id`, transiciona pago a `overdue` y bloquea participación con motivo `unpaid_fine`. |
+| POST | `/fines/:id/waive` | Condona una multa `pending|overdue`. Body `{ reason* }`. Si era la única abierta del usuario, **desbloquea** participación. |
+
+**Detalles:**
+- `actorId = req.user.sub` se usa como `empleados.identificador` para auditoría
+  (`clientes_admision.updated_by`, `multas.waived_by`). Se asume que los admins
+  también tienen fila en `empleados` (el seed crea persona/empleado/cliente
+  id=1).
+- El cálculo del monto de la multa: `amount = bid_amount * fine_percentage / 100`,
+  con `bid_amount` tomado de `registrodesubasta.importe` (o `pagos.monto` si
+  no hay registrodesubasta). `fine_percentage` default = `env.FINE_PERCENTAGE`
+  (=10). `deadline_at = NOW() + env.FINE_DEADLINE_HOURS` (=72h).
+
+---
+
 ## Reglas transversales
 
 Aplicables a todos los módulos del backend:
@@ -228,7 +266,6 @@ Aplicables a todos los módulos del backend:
 
 | Módulo | Endpoints aproximados | Notas |
 |---|---|---|
-| `admin` | aprobar/rechazar usuario, asignar categoría, cambiar admisión, aplicar/condonar multas, block-participation | Requiere `requireRole('admin')`. |
 | `favorites` | agregar, quitar, listar | Tabla `favoritos`. |
 | `notifications` | listar, marcar leída, settings | Tablas `notificaciones` + `notificaciones_settings`. |
 | `metrics` | métricas de cualquier usuario, participación en subastas | Reusable con queries similares a `users/me/metrics`. |
