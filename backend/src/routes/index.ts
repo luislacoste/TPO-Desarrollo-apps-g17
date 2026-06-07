@@ -11,6 +11,9 @@ import paymentMethodsRoutes from '../modules/payment-methods/payment-methods.rou
 import paymentsRoutes from '../modules/payments/payments.routes';
 import finesRoutes from '../modules/fines/fines.routes';
 import adminRoutes from '../modules/admin/admin.routes';
+import favoritesRoutes from '../modules/favorites/favorites.routes';
+import notificationsRoutes from '../modules/notifications/notifications.routes';
+import metricsRoutes from '../modules/metrics/metrics.routes';
 
 const router = Router();
 
@@ -42,11 +45,9 @@ router.use('/payment-methods', paymentMethodsRoutes);
 router.use('/payments',        paymentsRoutes);
 router.use('/fines',           finesRoutes);
 router.use('/admin',           adminRoutes);
-
-// A medida que se agreguen módulos, montar acá:
-//   router.use('/favorites',     favoritesRoutes);
-//   router.use('/notifications', notificationsRoutes);
-//   router.use('/metrics',       metricsRoutes);
+router.use('/favorites',       favoritesRoutes);
+router.use('/notifications',   notificationsRoutes);
+router.use('/metrics',         metricsRoutes);
 //   router.use('/payments',        paymentsRoutes);
 //   router.use('/fines',           finesRoutes);
 //   router.use('/admin',           adminRoutes);

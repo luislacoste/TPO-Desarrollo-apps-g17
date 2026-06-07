@@ -239,6 +239,45 @@ responde **`403 ForbiddenAdmin`** (corrección 2.3 del swagger).
 
 ---
 
+## Favorites (`/v1/favorites`) — todos requieren JWT
+
+Tabla `favoritos` con PK compuesta `(cliente_id, item_id)`.
+
+| Método | Path | Qué hace |
+|---|---|---|
+| GET | `/` | Lista mis favoritos con datos del item (catálogo, subasta, precio base, fotos). |
+| POST | `/:itemId` | Agrega un item a favoritos. **Idempotente** (ON CONFLICT DO NOTHING). 404 si el item no existe. |
+| DELETE | `/:itemId` | Quita un item. Idempotente (204 aunque no estuviera). |
+
+---
+
+## Notifications (`/v1/notifications`) — todos requieren JWT
+
+| Método | Path | Qué hace |
+|---|---|---|
+| GET | `/?read=true\|false` | Lista mis notificaciones. Filtro opcional `read`. |
+| GET | `/settings` | Configuración de notificaciones. Si nunca se guardó, devuelve defaults (todo en `true`). |
+| PUT | `/settings` | Actualiza preferencias. Body opcional `{ pushEnabled, emailEnabled, auctionStarting, bidOutbid, bidWon, paymentAlerts }` (todos boolean). UPSERT. |
+| PUT | `/:id/read` | Marca como leída. 404 si no existe; 409 si ya estaba leída. |
+
+> `/settings` se declara **antes** que `/:id/read` para que el router
+> no lo matchee como id.
+
+---
+
+## Metrics (`/v1/metrics`) — todos requieren JWT
+
+Stats agregadas de un usuario. Cualquier usuario autenticado puede
+consultar las métricas de cualquier otro (stats públicas dentro de
+la app; restringir más adelante si hace falta).
+
+| Método | Path | Qué hace |
+|---|---|---|
+| GET | `/user/:userId` | `{ userId, totalAuctions, wonAuctions, totalBids, totalSpent, winRate }`. Misma fórmula que `/users/me/metrics` pero generalizada. |
+| GET | `/user/:userId/auctions` | Listado de subastas en las que participó: `[{ auctionId, fecha, estado, numeroPostor, bidsCount, wonItems, totalSpent }]`. |
+
+---
+
 ## Reglas transversales
 
 Aplicables a todos los módulos del backend:
@@ -266,7 +305,4 @@ Aplicables a todos los módulos del backend:
 
 | Módulo | Endpoints aproximados | Notas |
 |---|---|---|
-| `favorites` | agregar, quitar, listar | Tabla `favoritos`. |
-| `notifications` | listar, marcar leída, settings | Tablas `notificaciones` + `notificaciones_settings`. |
-| `metrics` | métricas de cualquier usuario, participación en subastas | Reusable con queries similares a `users/me/metrics`. |
-| **WebSocket** | `wss://.../ws/auction/{id}` | Eventos `bid_placed, bid_accepted, item_sold, auction_ended, item_changed`. Por implementar. |
+| **WebSocket** | `wss://.../ws/auction/{id}` | Eventos `bid_placed, bid_accepted, item_sold, auction_ended, item_changed`. Por implementar — único componente del swagger que falta. |
