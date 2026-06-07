@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { pool } from '../db';
 import authRoutes from '../modules/auth/auth.routes';
+import usersRoutes from '../modules/users/users.routes';
+import categoriesRoutes from '../modules/categories/categories.routes';
 
 const router = Router();
 
@@ -21,11 +23,14 @@ router.get('/health', async (_req, res, next) => {
   }
 });
 
-router.use('/auth', authRoutes);
+router.use('/auth',       authRoutes);
+router.use('/users',      usersRoutes);
+router.use('/categories', categoriesRoutes);
 
 // A medida que se agreguen módulos, montar acá:
-//   router.use('/users', usersRoutes);
 //   router.use('/auctions', auctionsRoutes);
+//   router.use('/items',    itemsRoutes);
+//   router.use('/bids',     bidsRoutes);
 //   ...
 
 export default router;
