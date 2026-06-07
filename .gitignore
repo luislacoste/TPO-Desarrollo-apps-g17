@@ -7,10 +7,11 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Env / secrets
+# Env / secrets (cualquier .env en cualquier subcarpeta)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!**/.env.example
 
 # Build outputs
 dist/
@@ -34,3 +35,8 @@ backend/uploads/*
 
 # Prisma
 backend/prisma/*.db
+CLAUDE.md
+
+# Carpeta local de cosas que no van al remote
+.ignore/
+backend/.env.example
