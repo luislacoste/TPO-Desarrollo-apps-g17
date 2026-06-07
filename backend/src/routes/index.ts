@@ -6,6 +6,7 @@ import categoriesRoutes from '../modules/categories/categories.routes';
 import auctionsRoutes from '../modules/auctions/auctions.routes';
 import itemsRoutes from '../modules/items/items.routes';
 import bidsRoutes from '../modules/bids/bids.routes';
+import sellRoutes from '../modules/sell-requests/sell-requests.routes';
 
 const router = Router();
 
@@ -32,9 +33,9 @@ router.use('/categories', categoriesRoutes);
 router.use('/auctions',   auctionsRoutes);
 router.use('/items',      itemsRoutes);
 router.use('/bids',       bidsRoutes);
+router.use('/sell',       sellRoutes);
 
 // A medida que se agreguen módulos, montar acá:
-//   router.use('/sell',            sellRequestsRoutes);
 //   router.use('/payment-methods', paymentMethodsRoutes);
 //   router.use('/payments',        paymentsRoutes);
 //   router.use('/fines',           finesRoutes);

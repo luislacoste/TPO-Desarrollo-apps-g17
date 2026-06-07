@@ -112,6 +112,46 @@ subasta `abierta`. Reutilizado por `bids` vía
 
 ---
 
+## Sell Requests (`/v1/sell`) — todos requieren JWT
+
+Cubre el lado **del vendedor** del flujo. Las transiciones que dispara la
+empresa (`pending → reviewing → rejected_by_company | conditions_offered`)
+van a ir en el módulo `admin`.
+
+| Método | Path | Qué hace |
+|---|---|---|
+| POST | `/request` | Carga un objeto a vender. **Multipart** con `title, description, historia, images (≥6 archivos), ownershipDeclaration (1 archivo)`. Si el cliente nunca cargó nada, primero crea su fila en `duenios` (idempotente). Crea `solicitudes_venta (estado: pending)` + N `sell_request_imagenes`. |
+| GET | `/my-requests` | Listado paginado de mis solicitudes (`?page=&limit=`). |
+| GET | `/my-requests/:id` | Detalle + array de imágenes. Solo el dueño puede verlo. |
+| PUT | `/my-requests/:id/accept` | Acepta las condiciones propuestas por la empresa. **Solo válido en `conditions_offered`**. Transiciona a `accepted`. |
+| POST | `/my-requests/:id/reject` | Rechaza condiciones con `reason` obligatorio. **Solo válido en `conditions_offered`**. Transiciona a `conditions_rejected`, calcula `returnCost` y lo guarda. |
+| GET | `/my-requests/:id/rejection-reason` | Devuelve `{ rejectionBy, reason, rejectedAt }`. Sirve para rechazos de la empresa o del vendedor. 409 si la solicitud no está rechazada. |
+| GET | `/my-requests/:id/return-cost` | Devuelve breakdown: `{ amount, currency, breakdown: { shipping, handling, insurance }, carrier, estimatedDeliveryDate }`. Solo disponible cuando la solicitud está en `conditions_rejected | returning | returned`. |
+
+**Flujo de estados (`solicitudes_venta.estado`):**
+
+```
+pending → reviewing →
+  rejected_by_company       (terminal, motivo en rechazo_motivo)
+| conditions_offered →
+    accepted                (va a subasta)
+  | conditions_rejected → returning → returned   (motivo del vendedor)
+```
+
+**Detalles:**
+- El cálculo del costo de devolución (`calculateReturnCost`) usa fórmula
+  fija: `shipping=1500 + handling=500 + insurance=max(200, precio_base*1%)`.
+  Carrier por defecto: Andreani, ETA: +7 días. Cambia si la consigna
+  define otra cosa.
+- Cuando un cliente hace su primera solicitud y no existe en `duenios`,
+  se crea automáticamente con `verificacion_financiera/judicial='no'`,
+  `calificacionriesgo=3` y `verificador=1` (admin de sistema).
+- Las imágenes se guardan en `uploads/` vía multer; las URLs quedan
+  como `/uploads/<filename>` en `sell_request_imagenes.url` y
+  `solicitudes_venta.declaracion_origen_url`.
+
+---
+
 ## Reglas transversales
 
 Aplicables a todos los módulos del backend:
@@ -139,7 +179,6 @@ Aplicables a todos los módulos del backend:
 
 | Módulo | Endpoints aproximados | Notas |
 |---|---|---|
-| `sell-requests` | alta, accept, **reject (motivo)**, **rejection-reason**, **return-cost**, mis solicitudes | Flujo de 8 estados ya modelado en `solicitudes_venta`. |
 | `payment-methods` | listar, alta (credit card / bank account / certified check), eliminar, status | Cheque certificado sin restricción de categoría (corrección 5.2). |
 | `payments` | pendientes, detalle, pagar, facturas | Genera multa automática al vencer (consigna). |
 | `fines` | listar mías, detalle, pagar (regulariza dentro de 72hs) | Tablas `multas` con `deadline_at = issued_at + 72h`. |
