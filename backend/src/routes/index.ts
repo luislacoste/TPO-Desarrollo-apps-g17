@@ -3,6 +3,9 @@ import { pool } from '../db';
 import authRoutes from '../modules/auth/auth.routes';
 import usersRoutes from '../modules/users/users.routes';
 import categoriesRoutes from '../modules/categories/categories.routes';
+import auctionsRoutes from '../modules/auctions/auctions.routes';
+import itemsRoutes from '../modules/items/items.routes';
+import bidsRoutes from '../modules/bids/bids.routes';
 
 const router = Router();
 
@@ -26,11 +29,16 @@ router.get('/health', async (_req, res, next) => {
 router.use('/auth',       authRoutes);
 router.use('/users',      usersRoutes);
 router.use('/categories', categoriesRoutes);
+router.use('/auctions',   auctionsRoutes);
+router.use('/items',      itemsRoutes);
+router.use('/bids',       bidsRoutes);
 
 // A medida que se agreguen módulos, montar acá:
-//   router.use('/auctions', auctionsRoutes);
-//   router.use('/items',    itemsRoutes);
-//   router.use('/bids',     bidsRoutes);
+//   router.use('/sell',            sellRequestsRoutes);
+//   router.use('/payment-methods', paymentMethodsRoutes);
+//   router.use('/payments',        paymentsRoutes);
+//   router.use('/fines',           finesRoutes);
+//   router.use('/admin',           adminRoutes);
 //   ...
 
 export default router;
