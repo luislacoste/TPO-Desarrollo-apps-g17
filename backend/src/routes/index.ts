@@ -7,6 +7,9 @@ import auctionsRoutes from '../modules/auctions/auctions.routes';
 import itemsRoutes from '../modules/items/items.routes';
 import bidsRoutes from '../modules/bids/bids.routes';
 import sellRoutes from '../modules/sell-requests/sell-requests.routes';
+import paymentMethodsRoutes from '../modules/payment-methods/payment-methods.routes';
+import paymentsRoutes from '../modules/payments/payments.routes';
+import finesRoutes from '../modules/fines/fines.routes';
 
 const router = Router();
 
@@ -33,10 +36,13 @@ router.use('/categories', categoriesRoutes);
 router.use('/auctions',   auctionsRoutes);
 router.use('/items',      itemsRoutes);
 router.use('/bids',       bidsRoutes);
-router.use('/sell',       sellRoutes);
+router.use('/sell',            sellRoutes);
+router.use('/payment-methods', paymentMethodsRoutes);
+router.use('/payments',        paymentsRoutes);
+router.use('/fines',           finesRoutes);
 
 // A medida que se agreguen módulos, montar acá:
-//   router.use('/payment-methods', paymentMethodsRoutes);
+//   router.use('/admin', adminRoutes);
 //   router.use('/payments',        paymentsRoutes);
 //   router.use('/fines',           finesRoutes);
 //   router.use('/admin',           adminRoutes);

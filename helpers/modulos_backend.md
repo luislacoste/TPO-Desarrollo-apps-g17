@@ -152,6 +152,55 @@ pending → reviewing →
 
 ---
 
+## Payment Methods (`/v1/payment-methods`) — todos requieren JWT
+
+Una sola tabla `medios_pago` con los 3 subtipos. El cheque certificado
+**no** está restringido a Oro/Platino (corrección 5.2).
+
+| Método | Path | Qué hace |
+|---|---|---|
+| GET | `/` | Lista mis medios de pago (sólo del usuario logueado). |
+| POST | `/bank-account` | Registra cuenta bancaria: `{ bankName, cbu, holder }`. Valida CBU de 22 dígitos. |
+| POST | `/credit-card` | Registra tarjeta: `{ number, brand, holder, expMonth, expYear }`. Guarda solo `last4` (no el PAN completo). Valida fecha de expiración. |
+| POST | `/certified-check` | Registra cheque certificado: `{ checkNumber, bankName, amount, currency }`. Disponible para cualquier categoría. |
+| DELETE | `/:id` | Elimina. 409 si el medio tiene `pagos` asociados. |
+| GET | `/:id/status` | Estado de verificación: `{ id, tipo, verificado, estado: 'verified' \| 'pending_verification' }`. |
+
+---
+
+## Payments (`/v1/payments`) — todos requieren JWT
+
+| Método | Path | Qué hace |
+|---|---|---|
+| GET | `/pending` | Pagos del usuario con estado `pending`, `processing` u `overdue`. |
+| GET | `/invoices` | Mis facturas. Devuelve `[{ id, paymentId, numero, monto, moneda, pdfUrl, issuedAt }]`. |
+| GET | `/:id` | Detalle del pago + `breakdown: { baseAmount, commission }` desde `registrodesubasta`. |
+| POST | `/:id/pay` | Body `{ paymentMethodId }`. Valida que el pago esté `pending|processing`, el método pertenezca al cliente; marca `completed`, setea `paid_at`, genera `factura`. |
+
+> Las rutas `/pending` y `/invoices` se declaran **antes** de `/:id` para
+> que el router no las matchee como id.
+
+---
+
+## Fines (`/v1/fines`) — todos requieren JWT
+
+Multas del **10%** sobre la oferta, plazo de **72 hs** para regularizar.
+
+| Método | Path | Qué hace |
+|---|---|---|
+| GET | `/?status=pending\|paid\|overdue\|waived` | Lista mis multas. Antes de devolver, procesa overdues. |
+| GET | `/:id` | Detalle. |
+| POST | `/:id/pay` | Body `{ paymentMethodId }`. Regulariza: solo si la multa está `pending`. Si está `overdue` → 409 (caso judicial). En transacción: marca `paid`, y si no hay otras multas `pending|overdue` del cliente, **desbloquea `bids_blocked`**. |
+
+**Auto-overdue sin cron:** en cada lectura/pago se ejecuta
+`processOverdueForCliente`, que:
+1. `UPDATE multas SET estado='overdue' WHERE estado='pending' AND deadline_at < NOW() AND cliente_id=$1`.
+2. Si transicionó al menos una, marca `clientes_admision.estado = 'blocked'` y `clientes_participacion.bids_blocked = true` con motivo `overdue_fine`.
+
+Esto cubre la regla del swagger sin necesidad de un job programado.
+
+---
+
 ## Reglas transversales
 
 Aplicables a todos los módulos del backend:
@@ -179,9 +228,6 @@ Aplicables a todos los módulos del backend:
 
 | Módulo | Endpoints aproximados | Notas |
 |---|---|---|
-| `payment-methods` | listar, alta (credit card / bank account / certified check), eliminar, status | Cheque certificado sin restricción de categoría (corrección 5.2). |
-| `payments` | pendientes, detalle, pagar, facturas | Genera multa automática al vencer (consigna). |
-| `fines` | listar mías, detalle, pagar (regulariza dentro de 72hs) | Tablas `multas` con `deadline_at = issued_at + 72h`. |
 | `admin` | aprobar/rechazar usuario, asignar categoría, cambiar admisión, aplicar/condonar multas, block-participation | Requiere `requireRole('admin')`. |
 | `favorites` | agregar, quitar, listar | Tabla `favoritos`. |
 | `notifications` | listar, marcar leída, settings | Tablas `notificaciones` + `notificaciones_settings`. |
