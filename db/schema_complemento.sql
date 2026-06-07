@@ -34,10 +34,13 @@ DROP TABLE IF EXISTS clientes_credenciales CASCADE;
 -- ---------------------------------------------------------------------
 -- Auth: credenciales del cliente
 -- ---------------------------------------------------------------------
+-- password_hash es NULLABLE: la fila se crea en `POST /auth/register`
+-- (step 1) con el email, y el password se setea en `POST /auth/register/complete`
+-- (step 3). Mientras `password_hash IS NULL`, el login está bloqueado.
 CREATE TABLE clientes_credenciales (
     cliente_id    INT          PRIMARY KEY,
     email         VARCHAR(255) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
+    password_hash VARCHAR(255),
     role          VARCHAR(10)  NOT NULL DEFAULT 'user' CHECK (role IN ('user', 'admin')),
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_credenciales_clientes FOREIGN KEY (cliente_id) REFERENCES clientes (identificador) ON DELETE CASCADE
