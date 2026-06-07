@@ -23,6 +23,8 @@ export interface ItemBidContext {
   catalogo_id: number;
   subasta_id: number;
   subasta_estado: 'abierta' | 'cerrada';
+  subasta_categoria: 'bronce' | 'plata' | 'oro' | 'platino' | null;
+  subasta_moneda: 'ARS' | 'USD';
   precio_base: string;
   subastado: 'si' | 'no' | null;
   current_highest: string | null;
@@ -49,6 +51,8 @@ export async function getItemBidContext(itemId: number) {
             ic.catalogo              AS catalogo_id,
             c.subasta                AS subasta_id,
             s.estado                 AS subasta_estado,
+            s.categoria              AS subasta_categoria,
+            s.moneda                 AS subasta_moneda,
             ic.preciobase            AS precio_base,
             ic.subastado,
             (SELECT MAX(p.importe)::numeric::text

@@ -17,6 +17,7 @@ export interface SubastaRow {
   tiene_deposito: 'si' | 'no' | null;
   seguridad_propia: 'si' | 'no' | null;
   categoria: 'bronce' | 'plata' | 'oro' | 'platino' | null;
+  moneda: 'ARS' | 'USD';
   subastador_id: number | null;
   subastador_nombre: string | null;
   items_count: number;
@@ -52,6 +53,7 @@ const BASE_SELECT = `
          s.tienedeposito          AS tiene_deposito,
          s.seguridadpropia        AS seguridad_propia,
          s.categoria,
+         s.moneda,
          sub.identificador        AS subastador_id,
          p.nombre                 AS subastador_nombre,
          (SELECT COUNT(*)::int
@@ -173,4 +175,50 @@ export async function insertAsistente(
     [clienteId, subastaId, numeroPostor],
   );
   return rows[0].id;
+}
+
+/**
+ * ¿El cliente tiene al menos un medio de pago verificado por la empresa?
+ * Necesario para poder pujar (consigna).
+ */
+export async function hasVerifiedPaymentMethod(clienteId: number): Promise<boolean> {
+  const { rows } = await query<{ exists: boolean }>(
+    `SELECT EXISTS(
+       SELECT 1 FROM medios_pago
+        WHERE cliente_id = $1
+          AND verificado = TRUE
+     ) AS exists`,
+    [clienteId],
+  );
+  return rows[0]?.exists ?? false;
+}
+
+/**
+ * ¿El cliente ya está conectado a OTRA subasta abierta?
+ * La consigna prohíbe estar en más de una subasta a la vez.
+ */
+export async function hasActiveAsistenciaElsewhere(
+  clienteId: number,
+  exceptSubastaId: number,
+): Promise<boolean> {
+  const { rows } = await query<{ exists: boolean }>(
+    `SELECT EXISTS(
+       SELECT 1
+         FROM asistentes a
+         JOIN subastas   s ON s.identificador = a.subasta
+        WHERE a.cliente   = $1
+          AND s.estado    = 'abierta'
+          AND a.subasta  <> $2
+     ) AS exists`,
+    [clienteId, exceptSubastaId],
+  );
+  return rows[0]?.exists ?? false;
+}
+
+export async function getClienteCategoria(clienteId: number): Promise<string | null> {
+  const { rows } = await query<{ categoria: string | null }>(
+    `SELECT categoria FROM clientes WHERE identificador = $1`,
+    [clienteId],
+  );
+  return rows[0]?.categoria ?? null;
 }

@@ -70,9 +70,14 @@ no en DB. Son inmutables y son parte del contrato.
 | POST | `/:id/join` | JWT | Inscribe al cliente como `asistente` con el `numeropostor` siguiente. Idempotente (si ya está inscripto devuelve la asistencia). Devuelve `{ sessionId, asistente, wsUrl }`. |
 | GET | `/:id/stream` | JWT | URL placeholder del streaming (`streamUrl` + `wsUrl`). |
 
-**Validaciones de `join`:** admisión `approved`, no `bids_blocked`,
-subasta `abierta`. Reutilizado por `bids` vía
-`auctions.service.assertCanParticipate(clienteId)`.
+**Validaciones de `join`** (en orden):
+1. subasta `abierta`;
+2. admisión `approved` + no `bids_blocked` (`assertCanParticipate`);
+3. **categoría del cliente ≥ categoría de la subasta**
+   (bronce < plata < oro < platino);
+4. al menos **un medio de pago verificado** por la empresa;
+5. **no estar conectado a otra subasta abierta**
+   (idempotente: si ya está en ESTA, devuelve la asistencia existente).
 
 ---
 
@@ -104,8 +109,11 @@ subasta `abierta`. Reutilizado por `bids` vía
 2. Subasta `estado='abierta'`.
 3. Item no `subastado='si'`.
 4. Cliente inscripto como `asistente` de la subasta (sino 409 _"Tenés que unirte a la subasta antes de pujar"_).
-5. **Importe mínimo:** `oferta_actual * 1.01` (o `precio_base` si no hay pujas previas).
-6. **Importe máximo:** `precio_base * 1.20` — **excepto** si la categoría del cliente es `oro` o `platino` (sin tope).
+5. **Importe mínimo:** `oferta_actual + 1% × precio_base`. Si no hay puja previa, el mínimo es el precio base.
+6. **Importe máximo:** `oferta_actual + 20% × precio_base`. **NO aplica** si la **subasta** es de categoría `oro` o `platino`.
+
+> Ejemplo (consigna): `precio_base=10000`, `oferta_actual=15000` →
+> mínimo `15100`, máximo `17000`.
 
 > Las rutas `/bids/my*` están **antes** de `/bids/auction/:auctionId` en
 > el router para que `my` no sea matcheado como `auctionId`.

@@ -152,6 +152,8 @@ CREATE TABLE subastas (
     tienedeposito      VARCHAR(2) CHECK (tienedeposito IN ('si', 'no')),
     seguridadpropia    VARCHAR(2) CHECK (seguridadpropia IN ('si', 'no')),
     categoria          VARCHAR(10) CHECK (categoria IN ('bronce', 'plata', 'oro', 'platino')),
+    -- Una subasta no puede ser bimonetaria. Default ARS para compatibilidad.
+    moneda             VARCHAR(10) NOT NULL DEFAULT 'ARS' CHECK (moneda IN ('ARS', 'USD')),
     CONSTRAINT fk_subastas_subastadores FOREIGN KEY (subastador) REFERENCES subastadores (identificador)
 );
 

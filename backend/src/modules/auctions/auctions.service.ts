@@ -2,6 +2,7 @@
  * Lógica de negocio del módulo Auctions.
  */
 import * as repo from './auctions.repository';
+import { findCategoryById } from '../categories/categories.service';
 import { query } from '../../db';
 import { Conflict, Forbidden, NotFound, UnprocessableEntity } from '../../utils/errors';
 
@@ -53,14 +54,21 @@ export async function getCatalog(id: number) {
 
 /**
  * POST /auctions/{id}/join — el cliente se inscribe como asistente.
- * Reglas:
- *   - el cliente tiene que estar `admision.estado = approved`
- *   - el cliente no puede tener `bids_blocked = true`
- *   - la subasta tiene que estar `abierta`
- *   - no puede unirse dos veces (devuelve la asistencia existente)
  *
- * Devuelve `{ sessionId, asistente, wsUrl }`. La URL del WebSocket es
- * el placeholder definido en el swagger.
+ * Reglas (consigna):
+ *   1. la subasta tiene que estar `abierta`;
+ *   2. el cliente tiene que estar `admision.estado = approved` y no
+ *      tener `bids_blocked = true` (`assertCanParticipate`);
+ *   3. la **categoría del cliente** tiene que ser **mayor o igual** que
+ *      la categoría de la subasta (bronce<plata<oro<platino);
+ *   4. el cliente tiene que tener **al menos un medio de pago verificado**
+ *      por la empresa;
+ *   5. el cliente **no** puede estar conectado a otra subasta abierta.
+ *
+ * Si ya está inscripto en la misma subasta, devuelve idempotentemente la
+ * asistencia existente.
+ *
+ * Devuelve `{ sessionId, asistente, wsUrl }`.
  */
 export async function join(clienteId: number, subastaId: number) {
   const auction = await repo.findSubastaById(subastaId);
@@ -69,8 +77,29 @@ export async function join(clienteId: number, subastaId: number) {
     throw new Conflict('La subasta no está abierta');
   }
 
+  // (2) admisión + participación
   await assertCanParticipate(clienteId);
 
+  // (3) categoría del cliente >= categoría de la subasta
+  if (auction.categoria) {
+    const clientCat = await repo.getClienteCategoria(clienteId);
+    const auctionTier = findCategoryById(auction.categoria)?.tier ?? 0;
+    const clientTier  = clientCat ? (findCategoryById(clientCat)?.tier ?? 0) : 0;
+    if (clientTier < auctionTier) {
+      throw new Forbidden(
+        `Tu categoría (${clientCat ?? 'sin categoría'}) no permite acceder a una subasta ${auction.categoria}`,
+      );
+    }
+  }
+
+  // (4) medio de pago verificado por la empresa
+  if (!(await repo.hasVerifiedPaymentMethod(clienteId))) {
+    throw new Forbidden(
+      'Necesitás al menos un medio de pago verificado por la empresa para participar',
+    );
+  }
+
+  // Idempotencia: si ya está en ESTA subasta, devolver la asistencia existente.
   const existing = await repo.findAsistencia(clienteId, subastaId);
   if (existing) {
     return {
@@ -78,6 +107,13 @@ export async function join(clienteId: number, subastaId: number) {
       asistente: { id: existing.id, numeropostor: existing.numeropostor },
       wsUrl: buildWsUrl(subastaId),
     };
+  }
+
+  // (5) no puede estar conectado a otra subasta abierta.
+  if (await repo.hasActiveAsistenciaElsewhere(clienteId, subastaId)) {
+    throw new Conflict(
+      'Ya estás conectado a otra subasta abierta. No podés participar en más de una a la vez.',
+    );
   }
 
   const numeropostor = await repo.nextPostorNumber(subastaId);
