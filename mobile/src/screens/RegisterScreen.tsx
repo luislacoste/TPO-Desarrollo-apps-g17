@@ -42,61 +42,52 @@ export default function RegisterScreen({ navigation }: Props) {
     password: '',
     confirmPassword: '',
   })
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
+  const [stepError, setStepError] = useState<string | null>(null)
 
-  const update = (key: keyof typeof formData, value: string | null) =>
+  const update = (key: keyof typeof formData, value: string | null) => {
     setFormData(prev => ({ ...prev, [key]: value }))
-
-  const validateStep = (): boolean => {
-    if (currentStep === 1) {
-      const { firstName, lastName, dni, email, address, country } = formData
-      if (!firstName.trim() || !lastName.trim() || !dni.trim() || !email.trim() || !address.trim() || !country.trim()) {
-        Alert.alert('Campos incompletos', 'Por favor completa todos los campos para continuar.')
-        return false
-      }
-      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-      if (!emailOk) {
-        Alert.alert('Email inválido', 'Ingresa una dirección de email válida.')
-        return false
-      }
-    }
-    if (currentStep === 2) {
-      if (!formData.documentFront || !formData.documentBack) {
-        Alert.alert('Documentos requeridos', 'Por favor sube ambas fotos de tu documento para continuar.')
-        return false
-      }
-    }
-    if (currentStep === 4) {
-      const { password, confirmPassword } = formData
-      if (password.length < 8) {
-        Alert.alert('Contraseña inválida', 'La contraseña debe tener al menos 8 caracteres.')
-        return false
-      }
-      if (!/[A-Z]/.test(password)) {
-        Alert.alert('Contraseña inválida', 'La contraseña debe tener al menos una letra mayúscula.')
-        return false
-      }
-      if (!/[0-9]/.test(password)) {
-        Alert.alert('Contraseña inválida', 'La contraseña debe tener al menos un número.')
-        return false
-      }
-      if (password !== confirmPassword) {
-        Alert.alert('Contraseñas no coinciden', 'Las contraseñas ingresadas no son iguales.')
-        return false
-      }
-    }
-    return true
+    setFieldErrors(prev => ({ ...prev, [key]: '' }))
   }
 
   const handleNext = () => {
-    if (!validateStep()) return
+    if (currentStep === 1) {
+      const errors: Record<string, string> = {}
+      if (!formData.firstName.trim()) errors.firstName = 'El nombre es obligatorio'
+      if (!formData.lastName.trim()) errors.lastName = 'El apellido es obligatorio'
+      if (!formData.dni.trim()) errors.dni = 'El DNI es obligatorio'
+      else if (!/^\d{7,8}$/.test(formData.dni.trim())) errors.dni = 'El DNI debe tener 7 u 8 numeros'
+      if (!formData.email.trim()) errors.email = 'El email es obligatorio'
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) errors.email = 'El email no es valido'
+      if (!formData.address.trim()) errors.address = 'El domicilio es obligatorio'
+      if (!formData.country.trim()) errors.country = 'El pais es obligatorio'
+      if (Object.keys(errors).length > 0) { setFieldErrors(errors); return }
+    } else if (currentStep === 2) {
+      if (!formData.documentFront || !formData.documentBack) {
+        setStepError('Debes subir ambas fotos del documento para continuar')
+        return
+      }
+      setStepError(null)
+    } else if (currentStep === 4) {
+      const errors: Record<string, string> = {}
+      if (formData.password.length < 8) errors.password = 'Debe tener al menos 8 caracteres'
+      else if (!/[A-Z]/.test(formData.password)) errors.password = 'Debe incluir al menos una mayuscula'
+      else if (!/[0-9]/.test(formData.password)) errors.password = 'Debe incluir al menos un numero'
+      if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Las contrasenas no coinciden'
+      if (Object.keys(errors).length > 0) { setFieldErrors(errors); return }
+    }
+
     if (currentStep < 5) {
       setCurrentStep((currentStep + 1) as Step)
+      setFieldErrors({})
     } else {
       navigation.replace('Login')
     }
   }
 
   const handleBack = () => {
+    setFieldErrors({})
+    setStepError(null)
     if (currentStep > 1) {
       setCurrentStep((currentStep - 1) as Step)
     } else {
@@ -118,6 +109,7 @@ export default function RegisterScreen({ navigation }: Props) {
     })
     if (!result.canceled && result.assets[0]) {
       update(field, result.assets[0].uri)
+      setStepError(null)
     }
   }
 
@@ -126,50 +118,24 @@ export default function RegisterScreen({ navigation }: Props) {
       case 1:
         return (
           <View style={styles.stepContent}>
-            <FieldInput
-              icon="user"
-              label="Nombre"
-              placeholder="Tu nombre"
-              value={formData.firstName}
-              onChangeText={v => update('firstName', v)}
-            />
-            <FieldInput
-              icon="user"
-              label="Apellido"
-              placeholder="Tu apellido"
-              value={formData.lastName}
-              onChangeText={v => update('lastName', v)}
-            />
-            <FieldInput
-              icon="credit-card"
-              label="DNI"
-              placeholder="Tu DNI"
-              value={formData.dni}
-              onChangeText={v => update('dni', v)}
-              keyboardType="numeric"
-            />
-            <FieldInput
-              icon="mail"
-              label="Email"
-              placeholder="tu@email.com"
-              value={formData.email}
-              onChangeText={v => update('email', v)}
-              keyboardType="email-address"
-            />
-            <FieldInput
-              icon="map-pin"
-              label="Domicilio"
-              placeholder="Tu direccion"
-              value={formData.address}
-              onChangeText={v => update('address', v)}
-            />
-            <FieldInput
-              icon="globe"
-              label="Pais"
-              placeholder="Tu pais"
-              value={formData.country}
-              onChangeText={v => update('country', v)}
-            />
+            <FieldInput icon="user" label="Nombre" placeholder="Tu nombre"
+              value={formData.firstName} onChangeText={v => update('firstName', v)}
+              error={fieldErrors.firstName} />
+            <FieldInput icon="user" label="Apellido" placeholder="Tu apellido"
+              value={formData.lastName} onChangeText={v => update('lastName', v)}
+              error={fieldErrors.lastName} />
+            <FieldInput icon="credit-card" label="DNI" placeholder="Tu DNI (7 u 8 digitos)"
+              value={formData.dni} onChangeText={v => update('dni', v)}
+              keyboardType="numeric" error={fieldErrors.dni} />
+            <FieldInput icon="mail" label="Email" placeholder="tu@email.com"
+              value={formData.email} onChangeText={v => update('email', v)}
+              keyboardType="email-address" error={fieldErrors.email} />
+            <FieldInput icon="map-pin" label="Domicilio" placeholder="Tu direccion"
+              value={formData.address} onChangeText={v => update('address', v)}
+              error={fieldErrors.address} />
+            <FieldInput icon="globe" label="Pais" placeholder="Tu pais"
+              value={formData.country} onChangeText={v => update('country', v)}
+              error={fieldErrors.country} />
           </View>
         )
 
@@ -251,30 +217,22 @@ export default function RegisterScreen({ navigation }: Props) {
         const hasLength = formData.password.length >= 8
         const hasUpper = /[A-Z]/.test(formData.password)
         const hasNumber = /[0-9]/.test(formData.password)
+        const passwordsMatch = formData.confirmPassword.length > 0 && formData.password === formData.confirmPassword
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepHelp}>Crea una contrasena segura para tu cuenta</Text>
-            <FieldInput
-              icon="lock"
-              label="Contrasena"
-              placeholder="Minimo 8 caracteres"
-              value={formData.password}
-              onChangeText={v => update('password', v)}
-              secure
-            />
-            <FieldInput
-              icon="lock"
-              label="Confirmar contrasena"
-              placeholder="Repite tu contrasena"
-              value={formData.confirmPassword}
-              onChangeText={v => update('confirmPassword', v)}
-              secure
-            />
+            <FieldInput icon="lock" label="Contrasena" placeholder="Minimo 8 caracteres"
+              value={formData.password} onChangeText={v => update('password', v)}
+              secure error={fieldErrors.password} />
+            <FieldInput icon="lock" label="Confirmar contrasena" placeholder="Repite tu contrasena"
+              value={formData.confirmPassword} onChangeText={v => update('confirmPassword', v)}
+              secure error={fieldErrors.confirmPassword} />
             <View style={styles.requirements}>
               <Text style={styles.reqTitle}>La contrasena debe tener:</Text>
               <Requirement met={hasLength} text="Minimo 8 caracteres" />
               <Requirement met={hasUpper} text="Una letra mayuscula" />
               <Requirement met={hasNumber} text="Un numero" />
+              <Requirement met={passwordsMatch} text="Las contrasenas coinciden" />
             </View>
           </View>
         )
@@ -313,7 +271,6 @@ export default function RegisterScreen({ navigation }: Props) {
             <Text style={styles.headerSub}>Paso {currentStep} de 5</Text>
           </View>
         </View>
-        {/* Progress bar */}
         <View style={styles.progressWrap}>
           {STEPS.map(step => (
             <View
@@ -325,7 +282,6 @@ export default function RegisterScreen({ navigation }: Props) {
             />
           ))}
         </View>
-        {/* Step title */}
         <View style={styles.stepTitleRow}>
           <View style={styles.stepIconWrap}>
             <Feather name={STEPS[currentStep - 1].icon as any} size={20} color="#146C94" />
@@ -346,6 +302,9 @@ export default function RegisterScreen({ navigation }: Props) {
 
       {/* Footer */}
       <View style={styles.footer}>
+        {stepError && (
+          <Text style={styles.stepErrorText}>{stepError}</Text>
+        )}
         <TouchableOpacity style={styles.continueBtn} onPress={handleNext} activeOpacity={0.85}>
           <Text style={styles.continueBtnText}>
             {currentStep === 5 ? 'Finalizar Registro' : 'Continuar'}
@@ -367,6 +326,7 @@ function FieldInput({
   onChangeText,
   keyboardType = 'default',
   secure = false,
+  error,
 }: {
   icon: string
   label: string
@@ -375,12 +335,13 @@ function FieldInput({
   onChangeText: (v: string) => void
   keyboardType?: any
   secure?: boolean
+  error?: string
 }) {
   return (
     <View style={fi.wrap}>
       <Text style={fi.label}>{label}</Text>
-      <View style={fi.inputWrap}>
-        <Feather name={icon as any} size={18} color="#737373" style={fi.icon} />
+      <View style={[fi.inputWrap, !!error && fi.inputWrapError]}>
+        <Feather name={icon as any} size={18} color={error ? '#EF4444' : '#737373'} style={fi.icon} />
         <TextInput
           style={fi.input}
           placeholder={placeholder}
@@ -392,6 +353,7 @@ function FieldInput({
           autoCapitalize="none"
         />
       </View>
+      {!!error && <Text style={fi.errorText}>{error}</Text>}
     </View>
   )
 }
@@ -529,6 +491,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
     backgroundColor: '#FFFFFF',
+    gap: 8,
+  },
+  stepErrorText: {
+    fontSize: 13,
+    color: '#EF4444',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   continueBtn: {
     height: 52,
@@ -543,7 +512,7 @@ const styles = StyleSheet.create({
 })
 
 const fi = StyleSheet.create({
-  wrap: { gap: 6 },
+  wrap: { gap: 4 },
   label: { fontSize: 14, fontWeight: '500', color: '#0A0A0A' },
   inputWrap: {
     flexDirection: 'row',
@@ -555,8 +524,13 @@ const fi = StyleSheet.create({
     borderColor: '#E5E5E5',
     paddingHorizontal: 12,
   },
+  inputWrapError: {
+    borderColor: '#EF4444',
+    backgroundColor: '#FFF5F5',
+  },
   icon: { marginRight: 8 },
   input: { flex: 1, fontSize: 14, color: '#0A0A0A' },
+  errorText: { fontSize: 12, color: '#EF4444' },
 })
 
 const req = StyleSheet.create({
