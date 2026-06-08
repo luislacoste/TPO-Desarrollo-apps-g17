@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Levanta la app de SubastAR (frontend + backend).
-# Uso: ./start.sh
+# Uso:
+#   ./start.sh           → arranca normalmente
+#   ./start.sh --reset   → wipe DB + re-aplica schemas + seeds, luego arranca
 #
 # En el primer arranque:
 #   - crea backend/.env con el usuario de Postgres del sistema
@@ -133,6 +135,24 @@ ensure_database() {
   log "Base de datos '$db_name' no existe — creando..."
   createdb -U "$db_user" "$db_name" && log "Base de datos '$db_name' creada."
 }
+
+# ─── Reset opcional ────────────────────────────────────────────────────────────
+
+reset_database() {
+  log "Reseteando base de datos..."
+  setup_backend_env
+  ensure_postgres
+
+  pushd "$ROOT/backend" >/dev/null
+  [ ! -d "node_modules" ] && npm install --silent
+  npm run db:reset --silent  && log "Schema aplicado."
+  npm run seed:admin --silent && log "Admin creado."
+  popd >/dev/null
+}
+
+if [ "${1:-}" = "--reset" ]; then
+  reset_database
+fi
 
 # ─── Frontend ──────────────────────────────────────────────────────────────────
 if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
