@@ -7,6 +7,7 @@ import React, {
 } from "react";
 import {
   api,
+  ApiError,
   AuthResponse,
   BackendAuction,
   BackendMe,
@@ -207,6 +208,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setNotifications(notificationsData.map(mapNotification));
       setPaymentMethods(paymentMethodsData.map(mapPaymentMethod));
     } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        logout();
+        return;
+      }
       setError(
         err instanceof Error
           ? err.message

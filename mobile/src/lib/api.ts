@@ -114,22 +114,31 @@ export function getApiBaseUrl() {
   return `http://${inferHost()}:4000/v1`
 }
 
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) {
+    super(message)
+    this.name = 'ApiError'
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
   const headers = new Headers(init?.headers)
   if (!headers.has('Content-Type') && init?.body) headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
-  const response = await fetch(`${getApiBaseUrl()}${path}`, {
-    ...init,
-    headers,
-  })
+  let response: Response
+  try {
+    response = await fetch(`${getApiBaseUrl()}${path}`, { ...init, headers })
+  } catch {
+    throw new ApiError('Sin conexión a Internet. Verificá tu red.', 0)
+  }
 
   const isJson = response.headers.get('content-type')?.includes('application/json')
   const payload = isJson ? await response.json() : await response.text()
 
   if (!response.ok) {
     const message = typeof payload === 'string' ? payload : payload?.message ?? 'Error de red'
-    throw new Error(message)
+    throw new ApiError(message, response.status)
   }
 
   return payload as T

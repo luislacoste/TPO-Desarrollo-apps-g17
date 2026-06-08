@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import CategoryBadge from "../components/CategoryBadge";
@@ -33,11 +34,39 @@ const MENU_ITEMS = [
 ];
 
 export default function ProfileScreen({ navigation }: Props) {
-  const { me, metrics, logout } = useAppData();
+  const { me, metrics, logout, loading, error, refreshPrivateData } = useAppData();
   const successRate =
     metrics && metrics.totalAuctions > 0
       ? ((metrics.wonAuctions / metrics.totalAuctions) * 100).toFixed(0)
       : "0";
+
+  if (loading && !me) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Mi Perfil</Text>
+        </View>
+        <View style={styles.centered}>
+          <ActivityIndicator size="large" color="#3E73EE" />
+        </View>
+      </SafeAreaView>
+    )
+  }
+
+  if (!loading && error && !me) {
+    return (
+      <SafeAreaView style={styles.root}>
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Mi Perfil</Text>
+        </View>
+        <TouchableOpacity style={styles.centered} onPress={refreshPrivateData} activeOpacity={0.8}>
+          <Feather name="wifi-off" size={32} color="#D4D4D4" />
+          <Text style={styles.errorTitle}>No se pudo cargar el perfil</Text>
+          <Text style={styles.errorText}>{error}. Tocá para reintentar.</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    )
+  }
 
   return (
     <SafeAreaView style={styles.root}>
@@ -344,4 +373,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   logoutLabel: { fontSize: 15, fontWeight: "500", color: "#E7000B" },
+  centered: {
+    flex: 1, alignItems: "center", justifyContent: "center", gap: 10, paddingHorizontal: 32,
+  },
+  errorTitle: { fontSize: 16, fontWeight: "600", color: "#0A0A0A" },
+  errorText: { fontSize: 13, color: "#737373", textAlign: "center" },
 });

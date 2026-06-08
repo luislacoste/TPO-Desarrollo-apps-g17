@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppData } from "../context/AppContext";
@@ -124,6 +125,13 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
         )}
 
+        {loading && upcomingAuctions.length === 0 && !error && (
+          <View style={styles.loadingRow}>
+            <ActivityIndicator size="small" color="#3E73EE" />
+            <Text style={styles.loadingText}>Cargando subastas...</Text>
+          </View>
+        )}
+
         {error ? (
           <TouchableOpacity
             style={styles.errorBanner}
@@ -131,7 +139,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.8}
           >
             <Text style={styles.errorBannerText}>
-              {error}. Toca para reintentar.
+              {error}. Tocá para reintentar.
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -352,4 +360,12 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 14, fontWeight: "600", color: "#0A0A0A" },
   emptyText: { fontSize: 12, color: "#737373", marginTop: 4 },
+  loadingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    paddingVertical: 24,
+  },
+  loadingText: { fontSize: 13, color: "#737373" },
 });

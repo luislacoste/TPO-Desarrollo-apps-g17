@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import PaymentMethodCard from "../components/PaymentMethodCard";
@@ -40,13 +41,13 @@ const ADD_OPTIONS = [
 ];
 
 const INFO_BULLETS = [
-  "Debes tener al menos un medio de pago verificado para participar en subastas.",
-  "Los cheques certificados solo estan disponibles para usuarios categoria Oro y Platino.",
-  "La verificacion de cuentas bancarias puede demorar hasta 48 horas.",
+  "Debés tener al menos un medio de pago verificado para participar en subastas.",
+  "Los cheques certificados están disponibles para todos los usuarios registrados.",
+  "La verificación de cuentas bancarias puede demorar hasta 48 horas.",
 ];
 
 export default function PaymentsScreen({ navigation }: Props) {
-  const { paymentMethods } = useAppData();
+  const { paymentMethods, loading, error, refreshPrivateData } = useAppData();
 
   return (
     <SafeAreaView style={styles.root}>
@@ -73,16 +74,27 @@ export default function PaymentsScreen({ navigation }: Props) {
       >
         {/* Registered methods */}
         <View style={styles.methodsList}>
+          {loading && paymentMethods.length === 0 && (
+            <View style={styles.loadingState}>
+              <ActivityIndicator size="small" color="#3E73EE" />
+            </View>
+          )}
+          {!loading && error && paymentMethods.length === 0 && (
+            <TouchableOpacity style={styles.emptyState} onPress={refreshPrivateData} activeOpacity={0.8}>
+              <Text style={styles.emptyTitle}>No se pudieron cargar</Text>
+              <Text style={styles.emptyText}>{error}. Tocá para reintentar.</Text>
+            </TouchableOpacity>
+          )}
           {paymentMethods.map((method) => (
             <PaymentMethodCard key={method.id} method={method} />
           ))}
-          {paymentMethods.length === 0 && (
+          {!loading && !error && paymentMethods.length === 0 && (
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>
                 No tenés medios de pago registrados
               </Text>
               <Text style={styles.emptyText}>
-                Cuando agregues uno desde el backend, va a aparecer acá.
+                Agregá uno con el botón de abajo para participar en subastas.
               </Text>
             </View>
           )}
@@ -154,6 +166,14 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { padding: 16, gap: 24 },
   methodsList: { gap: 14 },
+  loadingState: {
+    padding: 24,
+    alignItems: "center",
+    backgroundColor: "#FAFAFA",
+    borderWidth: 1,
+    borderColor: "#E5E5E5",
+    borderRadius: 14,
+  },
   emptyState: {
     padding: 16,
     backgroundColor: "#FAFAFA",
