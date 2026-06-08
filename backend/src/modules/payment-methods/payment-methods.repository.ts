@@ -102,6 +102,14 @@ export async function isUsedByPayments(medioPagoId: number): Promise<boolean> {
   return rows[0]?.exists ?? false;
 }
 
+export async function verifyById(id: number) {
+  const { rowCount } = await query(
+    `UPDATE medios_pago SET verificado = TRUE WHERE identificador = $1`,
+    [id],
+  );
+  return rowCount ?? 0;
+}
+
 export async function deleteById(id: number, clienteId: number) {
   const { rowCount } = await query(
     `DELETE FROM medios_pago WHERE identificador = $1 AND cliente_id = $2`,

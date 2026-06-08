@@ -12,6 +12,9 @@
  */
 import { withTransaction } from '../../db';
 import * as repo from './admin.repository';
+import * as pmRepo from '../payment-methods/payment-methods.repository';
+import * as sellRepo from '../sell-requests/sell-requests.repository';
+import * as paymentsRepo from '../payments/payments.repository';
 import { env } from '../../config/env';
 import { BadRequest, Conflict, NotFound, UnprocessableEntity } from '../../utils/errors';
 
@@ -256,6 +259,83 @@ export async function applyFine(
 
   const fine = await repo.findFineById(fineId);
   return toFineResponse(fine!);
+}
+
+// ─── Medios de pago (admin) ───────────────────────────────────────────
+
+export async function verifyPaymentMethod(_actorId: number, id: number) {
+  const pm = await pmRepo.findById(id);
+  if (!pm) throw new NotFound('Medio de pago no encontrado');
+  await pmRepo.verifyById(id);
+  const fresh = await pmRepo.findById(id);
+  return {
+    id: fresh!.id,
+    clienteId: fresh!.cliente_id,
+    tipo: fresh!.tipo,
+    verificado: fresh!.verificado,
+  };
+}
+
+// ─── Solicitudes de venta (admin) ─────────────────────────────────────
+
+export async function offerSellRequestConditions(
+  _actorId: number,
+  id: number,
+  data: { precioBase: number; comisionPorcentaje: number; moneda: string; notas?: string },
+) {
+  const VALID_MONEDAS = ['ARS', 'USD'];
+  if (!Number.isFinite(data.precioBase) || data.precioBase <= 0) {
+    throw new UnprocessableEntity('precioBase inválido');
+  }
+  if (!Number.isFinite(data.comisionPorcentaje) || data.comisionPorcentaje < 0) {
+    throw new UnprocessableEntity('comisionPorcentaje inválido');
+  }
+  if (!VALID_MONEDAS.includes(data.moneda)) {
+    throw new UnprocessableEntity(`moneda inválida: ${data.moneda}`);
+  }
+
+  const sr = await sellRepo.findById(id);
+  if (!sr) throw new NotFound('Solicitud de venta no encontrada');
+  if (!['pending', 'reviewing'].includes(sr.estado)) {
+    throw new Conflict(`No se pueden ofrecer condiciones en estado '${sr.estado}'`);
+  }
+
+  const updated = await sellRepo.offerConditions(id, {
+    precio_base: data.precioBase,
+    comision_porcentaje: data.comisionPorcentaje,
+    moneda: data.moneda,
+    notas: data.notas ?? null,
+  });
+  if (updated === 0) throw new Conflict('No se pudo actualizar (estado cambió concurrentemente)');
+
+  return sellRepo.findById(id);
+}
+
+// ─── Pagos (admin) ────────────────────────────────────────────────────
+
+export async function createPayment(
+  _actorId: number,
+  data: { clienteId: number; monto: number; moneda: string; dueDate: string },
+) {
+  const VALID_MONEDAS = ['ARS', 'USD'];
+  if (!Number.isInteger(data.clienteId) || data.clienteId <= 0) {
+    throw new UnprocessableEntity('clienteId inválido');
+  }
+  if (!Number.isFinite(data.monto) || data.monto <= 0) {
+    throw new UnprocessableEntity('monto inválido');
+  }
+  if (!VALID_MONEDAS.includes(data.moneda)) {
+    throw new UnprocessableEntity(`moneda inválida: ${data.moneda}`);
+  }
+  if (!data.dueDate || !/^\d{4}-\d{2}-\d{2}$/.test(data.dueDate)) {
+    throw new UnprocessableEntity('dueDate inválida (formato YYYY-MM-DD)');
+  }
+
+  const user = await repo.findUserById(data.clienteId);
+  if (!user) throw new NotFound('Usuario no encontrado');
+
+  const paymentId = await paymentsRepo.insertPayment(data);
+  return paymentsRepo.findById(paymentId);
 }
 
 /**

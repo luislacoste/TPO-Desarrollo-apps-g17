@@ -25,9 +25,16 @@ router.patch('/users/:id/admission',              asyncHandler(ctrl.changeAdmiss
 router.post ('/users/:id/block-participation',    asyncHandler(ctrl.blockParticipation));
 router.post ('/users/:id/unblock-participation',  asyncHandler(ctrl.unblockParticipation));
 
-// ─── Multas ───────────────────────────────────────────────────────────
-router.get  ('/fines',                  asyncHandler(ctrl.listFines));
+// ─── Medios de pago ───────────────────────────────────────────────────
+router.post ('/payment-methods/:id/verify', asyncHandler(ctrl.verifyPaymentMethod));
+
+// ─── Solicitudes de venta ─────────────────────────────────────────────
+router.post ('/sell-requests/:id/offer-conditions', asyncHandler(ctrl.offerSellRequestConditions));
+
+// ─── Pagos ────────────────────────────────────────────────────────────
+router.post ('/payments',                asyncHandler(ctrl.createPayment));
+router.get  ('/fines',                   asyncHandler(ctrl.listFines));
 router.post ('/payments/:id/apply-fine', asyncHandler(ctrl.applyFine));
-router.post ('/fines/:id/waive',        asyncHandler(ctrl.waiveFine));
+router.post ('/fines/:id/waive',         asyncHandler(ctrl.waiveFine));
 
 export default router;

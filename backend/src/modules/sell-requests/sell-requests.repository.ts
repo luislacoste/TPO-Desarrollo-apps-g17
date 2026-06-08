@@ -189,6 +189,26 @@ export async function acceptConditions(id: number) {
   return rowCount ?? 0;
 }
 
+export async function offerConditions(
+  id: number,
+  data: { precio_base: number; comision_porcentaje: number; moneda: string; notas: string | null },
+) {
+  const { rowCount } = await query(
+    `UPDATE solicitudes_venta
+        SET estado                 = 'conditions_offered',
+            precio_base            = $2,
+            comision_porcentaje    = $3,
+            moneda                 = $4,
+            condiciones_notas      = $5,
+            condiciones_offered_at = NOW(),
+            updated_at             = NOW()
+      WHERE identificador = $1
+        AND estado IN ('pending', 'reviewing')`,
+    [id, data.precio_base, data.comision_porcentaje, data.moneda, data.notas],
+  );
+  return rowCount ?? 0;
+}
+
 export async function rejectConditions(
   id: number,
   reason: string,

@@ -19,6 +19,22 @@ async function main() {
   try {
     await client.query('BEGIN');
 
+    // Limpiar pujas y asistentes previos del demo para que los tests de bids empiecen desde cero.
+    await client.query(`
+      DELETE FROM pujos
+       WHERE item IN (
+         SELECT ic.identificador
+           FROM itemscatalogo ic
+           JOIN catalogos c ON c.identificador = ic.catalogo
+           JOIN subastas  s ON s.identificador = c.subasta
+          WHERE s.subastador = 1000
+       )
+    `);
+    await client.query(`
+      DELETE FROM asistentes
+       WHERE subasta IN (SELECT identificador FROM subastas WHERE subastador = 1000)
+    `);
+
     // Martillero
     await client.query(`
       INSERT INTO personas (identificador, documento, nombre, direccion, estado)
@@ -58,11 +74,15 @@ async function main() {
       WHERE NOT EXISTS (SELECT 1 FROM subastas WHERE subastador = 1000 AND estado = 'abierta')
     `);
 
-    // Producto del dueño demo.
+    // Producto demo: siempre el "Juego de té" (identificado por su descripción).
     await client.query(`
       INSERT INTO productos (fecha, disponible, descripcioncompleta, revisor, duenio)
       SELECT CURRENT_DATE, 'si', 'Juego de té de 18 piezas — pieza demo', 1, 1001
-      WHERE NOT EXISTS (SELECT 1 FROM productos WHERE duenio = 1001)
+      WHERE NOT EXISTS (
+        SELECT 1 FROM productos
+         WHERE duenio = 1001
+           AND descripcioncompleta = 'Juego de té de 18 piezas — pieza demo'
+      )
     `);
 
     // Catálogo asociado a la subasta demo.
@@ -75,13 +95,14 @@ async function main() {
        LIMIT 1
     `);
 
-    // Ítem del catálogo demo (precio base 10000).
+    // Ítem del catálogo demo (precio base 10000) usando el producto demo específico.
     await client.query(`
       INSERT INTO itemscatalogo (catalogo, producto, preciobase, comision, subastado)
       SELECT c.identificador, p.identificador, 10000.00, 1000.00, 'no'
         FROM catalogos c
         JOIN subastas  s ON s.identificador = c.subasta
         JOIN productos p ON p.duenio = 1001
+                        AND p.descripcioncompleta = 'Juego de té de 18 piezas — pieza demo'
        WHERE s.subastador = 1000 AND s.estado = 'abierta'
          AND NOT EXISTS (
            SELECT 1 FROM itemscatalogo ic
@@ -93,6 +114,7 @@ async function main() {
     await client.query('COMMIT');
 
     // Mostrar los IDs creados para que test-all.sh los lea.
+    // Filtra por el producto demo específico para evitar devolver ítems de otro precio.
     const { rows: ids } = await client.query<{
       subasta_id: number; producto_id: number; catalogo_id: number; item_id: number;
     }>(`
@@ -105,6 +127,8 @@ async function main() {
         JOIN itemscatalogo ic ON ic.catalogo = c.identificador
         JOIN productos p ON p.identificador = ic.producto
        WHERE s.subastador = 1000 AND s.estado = 'abierta'
+         AND p.descripcioncompleta = 'Juego de té de 18 piezas — pieza demo'
+         AND ic.preciobase = 10000.00
        ORDER BY s.identificador DESC LIMIT 1
     `);
 

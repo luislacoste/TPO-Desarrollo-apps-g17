@@ -126,6 +126,21 @@ export async function listInvoicesByCliente(clienteId: number) {
   return rows;
 }
 
+export async function insertPayment(data: {
+  clienteId: number;
+  monto: number;
+  moneda: string;
+  dueDate: string;
+}): Promise<number> {
+  const { rows } = await query<{ id: number }>(
+    `INSERT INTO pagos (cliente_id, monto, moneda, estado, due_date)
+     VALUES ($1, $2, $3, 'pending', $4)
+     RETURNING identificador AS id`,
+    [data.clienteId, data.monto, data.moneda, data.dueDate],
+  );
+  return rows[0].id;
+}
+
 // ─── Helper interno: ¿el medio de pago pertenece al cliente? ──────────
 
 export async function medioPagoBelongsTo(medioPagoId: number, clienteId: number): Promise<boolean> {

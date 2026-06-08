@@ -232,10 +232,9 @@ RES=$(curl_capture "$API/payment-methods/$MEDIO_ID/status" \
   -H "Authorization: Bearer $USER_TOKEN")
 assert_status "GET /payment-methods/:id/status" 200 "$(split_code "$RES")"
 
-# Verificar el medio (no hay endpoint admin → SQL directo)
-note "Verificando medio de pago $MEDIO_ID vía psql"
-psql_run "UPDATE medios_pago SET verificado = TRUE WHERE identificador = $MEDIO_ID;" \
-  >/dev/null 2>&1 || note "psql falló: chequeá DB_* en backend/.env"
+RES=$(curl_capture -X POST "$API/admin/payment-methods/$MEDIO_ID/verify" \
+  -H "Authorization: Bearer $ADMIN_TOKEN")
+assert_status "POST /admin/payment-methods/:id/verify" 200 "$(split_code "$RES")"
 
 # =====================================================================
 # 6. Crear subasta (admin) + browsing público
@@ -409,10 +408,11 @@ assert_status "GET /sell/my-requests" 200 "$(split_code "$RES")"
 RES=$(curl_capture "$API/sell/my-requests/$SELL_ID" -H "Authorization: Bearer $USER_TOKEN")
 assert_status "GET /sell/my-requests/:id" 200 "$(split_code "$RES")"
 
-# Simular que la empresa propone condiciones (no hay endpoint todavía)
-note "Simulando 'conditions_offered' vía psql"
-psql_run "UPDATE solicitudes_venta SET estado='conditions_offered', precio_base=50000, comision_porcentaje=10, moneda='ARS', condiciones_offered_at=NOW() WHERE identificador=$SELL_ID;" \
-  >/dev/null 2>&1
+RES=$(curl_capture -X POST "$API/admin/sell-requests/$SELL_ID/offer-conditions" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{ "precioBase": 50000, "comisionPorcentaje": 10, "moneda": "ARS" }')
+assert_status "POST /admin/sell-requests/:id/offer-conditions" 200 "$(split_code "$RES")"
 
 RES=$(curl_capture -X PUT "$API/sell/my-requests/$SELL_ID/accept" \
   -H "Authorization: Bearer $USER_TOKEN")
@@ -425,7 +425,13 @@ step "12. Pagos"
 
 # Crear un pago de prueba (no hay endpoint para esto fuera del cierre de subasta)
 note "Insertando pago vía psql"
-PAY_ID=$(psql -tAq -c "INSERT INTO pagos (cliente_id, monto, moneda, estado, due_date) VALUES ($USER_ID, 11500, 'ARS', 'pending', CURRENT_DATE + INTERVAL '3 days') RETURNING identificador;" 2>/dev/null | tr -d ' \n')
+DUE_DATE=$(date -v+3d +%Y-%m-%d 2>/dev/null || date -d '+3 days' +%Y-%m-%d)
+RES=$(curl_capture -X POST "$API/admin/payments" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d "{ \"clienteId\": $USER_ID, \"monto\": 11500, \"moneda\": \"ARS\", \"dueDate\": \"$DUE_DATE\" }")
+assert_status "POST /admin/payments (crear pago)" 201 "$(split_code "$RES")"
+PAY_ID=$(split_body "$RES" | jq -r '.id // empty')
 
 if [ -n "$PAY_ID" ]; then
   RES=$(curl_capture "$API/payments/pending" -H "Authorization: Bearer $USER_TOKEN")
@@ -448,7 +454,13 @@ fi
 # =====================================================================
 step "13. Multas"
 
-PAY2_ID=$(psql -tAq -c "INSERT INTO pagos (cliente_id, monto, moneda, estado, due_date) VALUES ($USER_ID, 11500, 'ARS', 'pending', CURRENT_DATE - INTERVAL '1 day') RETURNING identificador;" 2>/dev/null | tr -d ' \n')
+DUE_DATE2=$(date -v-1d +%Y-%m-%d 2>/dev/null || date -d '-1 day' +%Y-%m-%d)
+RES=$(curl_capture -X POST "$API/admin/payments" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d "{ \"clienteId\": $USER_ID, \"monto\": 11500, \"moneda\": \"ARS\", \"dueDate\": \"$DUE_DATE2\" }")
+assert_status "POST /admin/payments (pago vencido)" 201 "$(split_code "$RES")"
+PAY2_ID=$(split_body "$RES" | jq -r '.id // empty')
 
 if [ -n "$PAY2_ID" ]; then
   RES=$(curl_capture -X POST "$API/admin/payments/$PAY2_ID/apply-fine" \

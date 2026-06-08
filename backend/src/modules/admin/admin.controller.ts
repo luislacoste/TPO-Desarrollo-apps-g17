@@ -75,6 +75,37 @@ export async function unblockParticipation(req: Request, res: Response) {
   res.json(await svc.unblockParticipation(actorId(req), paramId(req)));
 }
 
+// ─── Medios de pago ───────────────────────────────────────────────────
+
+export async function verifyPaymentMethod(req: Request, res: Response) {
+  res.json(await svc.verifyPaymentMethod(actorId(req), paramId(req)));
+}
+
+// ─── Solicitudes de venta ─────────────────────────────────────────────
+
+export async function offerSellRequestConditions(req: Request, res: Response) {
+  const precioBase         = Number(req.body?.precioBase);
+  const comisionPorcentaje = Number(req.body?.comisionPorcentaje);
+  const moneda             = requireString(req.body?.moneda, 'moneda');
+  const notas              = req.body?.notas ? String(req.body.notas) : undefined;
+  res.json(await svc.offerSellRequestConditions(actorId(req), paramId(req), {
+    precioBase,
+    comisionPorcentaje,
+    moneda,
+    notas,
+  }));
+}
+
+// ─── Pagos ────────────────────────────────────────────────────────────
+
+export async function createPayment(req: Request, res: Response) {
+  const clienteId = Number(req.body?.clienteId);
+  const monto     = Number(req.body?.monto);
+  const moneda    = requireString(req.body?.moneda, 'moneda');
+  const dueDate   = requireString(req.body?.dueDate, 'dueDate');
+  res.status(201).json(await svc.createPayment(actorId(req), { clienteId, monto, moneda, dueDate }));
+}
+
 // ─── Multas ───────────────────────────────────────────────────────────
 
 export async function listFines(req: Request, res: Response) {
