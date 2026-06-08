@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "SubastAR",
+    "slug": "subastar-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icono-png.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": false,
+    "splash": {
+      "image": "./assets/icono-png.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#146C94"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.uade.subastar"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/icono-png.png",
+        "backgroundColor": "#146C94"
+      },
+      "package": "com.uade.subastar"
+    },
+    "plugins": [
+      "expo-font",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "La app necesita acceso a tus fotos para subir documentos.",
+          "cameraPermission": "La app necesita acceso a tu camara para tomar fotos de documentos."
+        }
+      ]
+    ]
+  }
+}

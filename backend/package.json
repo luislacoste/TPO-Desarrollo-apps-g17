@@ -8,7 +8,8 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "db:reset":  "ts-node-dev --transpile-only --no-notify src/scripts/dbReset.ts",
-    "seed:admin": "ts-node-dev --transpile-only --no-notify src/scripts/seedAdmin.ts"
+    "seed:admin": "ts-node-dev --transpile-only --no-notify src/scripts/seedAdmin.ts",
+    "seed:demo": "ts-node-dev --transpile-only --no-notify src/scripts/seedDemoData.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
