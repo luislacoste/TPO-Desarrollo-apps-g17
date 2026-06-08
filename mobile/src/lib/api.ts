@@ -1,7 +1,7 @@
 import { NativeModules, Platform } from 'react-native'
 import Constants from 'expo-constants'
 
-export type BackendCategory = 'bronce' | 'plata' | 'oro' | 'platino'
+export type BackendCategory = 'comun' | 'especial' | 'plata' | 'oro' | 'platino'
 
 export interface AuthUser {
   id: number

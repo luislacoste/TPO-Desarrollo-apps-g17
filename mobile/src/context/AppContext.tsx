@@ -16,7 +16,7 @@ import {
   BackendCategory,
 } from "../lib/api";
 
-export type UiCategory = BackendCategory | "comun" | "especial";
+export type UiCategory = BackendCategory;
 
 export interface UiAuction {
   id: string;

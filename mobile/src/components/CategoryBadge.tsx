@@ -37,14 +37,6 @@ const categoryStyles: Record<UiCategory, CategoryStyle> = {
     iconSet: "feather",
     iconName: "star",
   },
-  bronce: {
-    label: "Bronce",
-    bg: "#F5F5F5",
-    text: "#737373",
-    border: "#E5E5E5",
-    iconSet: "feather",
-    iconName: "circle",
-  },
   plata: {
     label: "Plata",
     bg: "#F1F5F9",
