@@ -15,7 +15,10 @@ const storage = multer.diskStorage({
   },
 });
 
-const ACCEPTED = new Set(['image/jpeg', 'image/png', 'application/pdf']);
+const ACCEPTED = new Set([
+  'image/jpeg', 'image/png', 'application/pdf',
+  'image/heic', 'image/heif',  // iOS default camera format
+]);
 
 export const upload = multer({
   storage,
