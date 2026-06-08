@@ -114,6 +114,32 @@ export function getApiBaseUrl() {
   return `http://${inferHost()}:4000/v1`
 }
 
+export function getWsBaseUrl() {
+  return `ws://${inferHost()}:4000`
+}
+
+export interface BackendAuctionItem {
+  item_id: number
+  catalogo_id: number
+  producto_id: number
+  precio_base: string
+  comision: string
+  subastado: 'si' | 'no'
+  descripcion_catalogo: string | null
+  fotos_count: number
+}
+
+export interface BackendBidRow {
+  id: number
+  importe: string
+  ganador: boolean
+  item_id: number
+  asistente_id: number
+  cliente_id: number
+  numero_postor: number
+  subasta_id: number
+}
+
 async function request<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
   const headers = new Headers(init?.headers)
   if (!headers.has('Content-Type') && init?.body) headers.set('Content-Type', 'application/json')
@@ -175,6 +201,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ userId, password }),
     }),
+
+  getAuctionCatalog: (id: number) => request<BackendAuctionItem[]>(`/auctions/${id}/catalog`),
+  getBidsForAuction: (id: number) => request<BackendBidRow[]>(`/bids/auction/${id}`),
 
   getActiveAuctions: () => request<BackendAuction[]>('/auctions/active'),
   getUpcomingAuctions: () => request<BackendAuction[]>('/auctions/upcoming'),
