@@ -17,6 +17,7 @@ router.get('/active',   asyncHandler(ctrl.listActive));
 router.get('/upcoming', asyncHandler(ctrl.listUpcoming));
 router.get('/:id',           asyncHandler(ctrl.getById));
 router.get('/:id/catalog',   asyncHandler(ctrl.getCatalog));
+router.post('/:id/items',    auth, requireRole('admin'), asyncHandler(ctrl.addItems));
 router.post('/:id/join',     auth, asyncHandler(ctrl.join));
 router.get('/:id/stream',    auth, asyncHandler(ctrl.getStream));
 

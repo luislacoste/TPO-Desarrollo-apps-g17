@@ -1,16 +1,13 @@
 /**
  * Catálogo de categorías de usuario.
  *
- * Estas 4 categorías están definidas en el contrato (swagger) y son
+ * Estas 5 categorías están definidas en el contrato (swagger) y son
  * estáticas — no se modifican desde la UI ni desde admin. Por eso viven
  * acá como constante en código en lugar de una tabla.
- *
- * Las descripciones reflejan la tabla de "Categorías de usuario" del
- * encabezado del swagger.
  */
 import { NotFound } from '../../utils/errors';
 
-export type CategoryId = 'bronce' | 'plata' | 'oro' | 'platino';
+export type CategoryId = 'comun' | 'especial' | 'plata' | 'oro' | 'platino';
 
 export interface Category {
   id: CategoryId;
@@ -24,8 +21,8 @@ export interface Category {
 
 const CATEGORIES: ReadonlyArray<Category> = [
   {
-    id: 'bronce',
-    name: 'Bronce',
+    id: 'comun',
+    name: 'Común',
     tier: 1,
     description: 'Acceso básico a subastas públicas.',
     benefits: [
@@ -35,12 +32,26 @@ const CATEGORIES: ReadonlyArray<Category> = [
     requirements: ['Registro completado y aprobado por la empresa.'],
   },
   {
+    id: 'especial',
+    name: 'Especial',
+    tier: 2,
+    description: 'Acceso a subastas especiales.',
+    benefits: [
+      'Todo lo de Común',
+      'Acceso a subastas especiales',
+    ],
+    requirements: [
+      'Historial de actividad positivo',
+      'Aprobación de la empresa',
+    ],
+  },
+  {
     id: 'plata',
     name: 'Plata',
-    tier: 2,
+    tier: 3,
     description: 'Beneficios extra, límite de pujas mayor.',
     benefits: [
-      'Todo lo de Bronce',
+      'Todo lo de Especial',
       'Límite de pujas más alto',
       'Notificaciones prioritarias',
     ],
@@ -52,7 +63,7 @@ const CATEGORIES: ReadonlyArray<Category> = [
   {
     id: 'oro',
     name: 'Oro',
-    tier: 3,
+    tier: 4,
     description: 'Subastas exclusivas, beneficios premium.',
     benefits: [
       'Todo lo de Plata',
@@ -67,7 +78,7 @@ const CATEGORIES: ReadonlyArray<Category> = [
   {
     id: 'platino',
     name: 'Platino',
-    tier: 4,
+    tier: 5,
     description: 'Acceso completo, sin límites de reglas estándar.',
     benefits: [
       'Todo lo de Oro',
