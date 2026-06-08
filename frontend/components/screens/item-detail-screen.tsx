@@ -2,13 +2,16 @@
 
 import { useState, useEffect } from "react"
 import { MobileScreen } from "@/components/mobile-frame"
-import { ArrowLeft, Flame, Users, Image as ImageIcon, Minus, Plus } from "lucide-react"
+import { ArrowLeft, Flame, Users, Image as ImageIcon, Minus, Plus, Check, X } from "lucide-react"
 import { auctions, auctionItems } from "@/lib/mock-data"
 
 interface ItemDetailScreenProps {
   itemId: string
   onBack: () => void
+  onGoHome: () => void
 }
+
+type BidStatus = 'idle' | 'success' | 'error'
 
 function getMinIncrement(currentBid: number): number {
   if (currentBid >= 2000000) return 100000
@@ -28,19 +31,25 @@ function formatARS(amount: number): string {
   return '$ ' + amount.toLocaleString('es-AR')
 }
 
-export function ItemDetailScreen({ itemId, onBack }: ItemDetailScreenProps) {
+export function ItemDetailScreen({ itemId, onBack, onGoHome }: ItemDetailScreenProps) {
   const item = auctionItems.find(i => i.id === itemId) || auctionItems[0]
   const auction = auctions.find(a => a.id === item.auctionId) || auctions[0]
   const currentBid = item.currentBid ?? item.basePrice
   const minIncrement = getMinIncrement(currentBid)
 
   const [bidAmount, setBidAmount] = useState(currentBid + minIncrement)
-  const [timeRemaining, setTimeRemaining] = useState(8100) // 2h 15m
+  const [timeRemaining, setTimeRemaining] = useState(8100)
+  const [bidStatus, setBidStatus] = useState<BidStatus>('idle')
 
   useEffect(() => {
     const timer = setInterval(() => setTimeRemaining(prev => Math.max(0, prev - 1)), 1000)
     return () => clearInterval(timer)
   }, [])
+
+  const handleOffer = () => {
+    const success = Math.random() > 0.2
+    setBidStatus(success ? 'success' : 'error')
+  }
 
   const quickIncrements = [minIncrement, minIncrement * 2, minIncrement * 5]
   const selectedQuickIndex = quickIncrements.indexOf(bidAmount - currentBid)
@@ -57,19 +66,20 @@ export function ItemDetailScreen({ itemId, onBack }: ItemDetailScreenProps) {
 
         {/* Top bar */}
         <div style={{
-          flexShrink: 0, height: 73, background: '#FFFFFF',
+          flexShrink: 0, height: 73, background: '#AFD3E2',
           display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12,
+          borderBottom: '1px solid #8BBDD0',
         }}>
           <button
             onClick={onBack}
             style={{ padding: '8px 8px 8px 0', display: 'flex', alignItems: 'center', cursor: 'pointer', flexShrink: 0 }}
             aria-label="Volver"
           >
-            <ArrowLeft style={{ width: 20, height: 20, color: '#0A0A0A' }} />
+            <ArrowLeft style={{ width: 20, height: 20, color: '#0a3d54' }} />
           </button>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: 12, color: '#737373', lineHeight: '16px' }}>{auction.title}</span>
-            <span style={{ fontSize: 16, fontWeight: 600, color: '#0A0A0A', lineHeight: '24px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <span style={{ fontSize: 12, color: '#146C94', lineHeight: '16px' }}>{auction.title}</span>
+            <span style={{ fontSize: 16, fontWeight: 600, color: '#0a3d54', lineHeight: '24px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {item.title}
             </span>
           </div>
@@ -200,6 +210,7 @@ export function ItemDetailScreen({ itemId, onBack }: ItemDetailScreenProps) {
 
             {/* Submit button */}
             <button
+              onClick={handleOffer}
               style={{
                 width: '100%', height: 48, background: '#171717', borderRadius: 8,
                 border: 'none', cursor: 'pointer',
@@ -216,6 +227,80 @@ export function ItemDetailScreen({ itemId, onBack }: ItemDetailScreenProps) {
           </div>
 
         </div>
+
+        {/* Confirmation overlay */}
+        {bidStatus !== 'idle' && (
+          <div style={{
+            position: 'absolute', inset: 0, background: '#FFFFFF', zIndex: 50,
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            padding: '32px',
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: '100%' }}>
+
+              {/* Icon circle */}
+              <div style={{
+                width: 80, height: 80, borderRadius: '50%',
+                background: bidStatus === 'success' ? '#DCFCE7' : '#FFC4C7',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 8,
+              }}>
+                {bidStatus === 'success'
+                  ? <Check style={{ width: 40, height: 40, color: '#00A63E', strokeWidth: 3 }} />
+                  : <X style={{ width: 40, height: 40, color: '#E7000B', strokeWidth: 3 }} />
+                }
+              </div>
+
+              {/* Title */}
+              <h2 style={{ fontSize: 20, fontWeight: 700, color: '#0A0A0A', textAlign: 'center', margin: 0 }}>
+                {bidStatus === 'success' ? 'Oferta realizada' : 'No pudimos realizar tu oferta'}
+              </h2>
+
+              {/* Subtitles */}
+              {bidStatus === 'success' ? (
+                <>
+                  <p style={{ fontSize: 16, color: '#737373', textAlign: 'center', margin: 0 }}>
+                    Tu oferta de {formatARS(bidAmount)}
+                  </p>
+                  <p style={{ fontSize: 16, color: '#737373', textAlign: 'center', margin: 0 }}>
+                    por {item.title} fue registrada
+                  </p>
+                </>
+              ) : (
+                <p style={{ fontSize: 16, color: '#737373', textAlign: 'center', margin: 0 }}>
+                  Intente ofertar nuevamente
+                </p>
+              )}
+
+              {/* Buttons */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: '100%', marginTop: 24 }}>
+                <button
+                  onClick={onBack}
+                  style={{
+                    width: '100%', height: 36, background: '#19A7CE', borderRadius: 8,
+                    border: 'none', cursor: 'pointer',
+                    fontSize: 14, fontWeight: 500, color: '#FAFAFA',
+                  }}
+                >
+                  {bidStatus === 'success' ? 'Ver otros items de esta subasta' : 'Ver o ofertar'}
+                </button>
+                <button
+                  onClick={onGoHome}
+                  style={{
+                    width: '100%', height: 36, background: '#AFD3E2', borderRadius: 8,
+                    border: '1px solid #E5E5E5', cursor: 'pointer',
+                    fontSize: 14, fontWeight: 500, color: '#0A0A0A',
+                    boxShadow: '0px 1px 2px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  Volver al inicio
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </div>
     </MobileScreen>
   )

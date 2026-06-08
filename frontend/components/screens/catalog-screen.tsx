@@ -46,15 +46,16 @@ export function CatalogScreen({ activeNav, onNavigate, onViewAuction }: CatalogS
     <MobileScreen safeAreaTop={false}>
       <div className="h-full flex flex-col bg-background">
         {/* Header */}
-        <div className="px-4 pt-14 pb-4 bg-background border-b border-border">
+        <div className="px-4 pt-14 pb-4 border-b" style={{ background: '#AFD3E2', borderColor: '#8BBDD0' }}>
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-xl font-bold text-foreground">Catalogo</h1>
-            <button 
+            <h1 className="text-xl font-bold" style={{ color: '#0a3d54' }}>Catalogo</h1>
+            <button
               onClick={() => setShowFilters(!showFilters)}
               className={cn(
                 "p-2 rounded-full transition-colors",
-                showFilters ? "bg-primary text-primary-foreground" : "hover:bg-muted text-foreground"
+                showFilters ? "bg-[#0a3d54] text-white" : "hover:bg-white/30"
               )}
+              style={{ color: '#0a3d54' }}
             >
               <SlidersHorizontal className="w-5 h-5" />
             </button>

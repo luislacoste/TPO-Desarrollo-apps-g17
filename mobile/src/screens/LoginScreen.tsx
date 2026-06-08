@@ -28,7 +28,7 @@ export default function LoginScreen({ navigation }: Props) {
     if (!email || !password || authLoading) return;
     try {
       await login(email, password);
-      navigation.replace("Main");
+      navigation.replace("Home");
     } catch {
       // El mensaje visible queda en el contexto.
     }
@@ -210,11 +210,11 @@ const styles = StyleSheet.create({
   inputPadRight: { paddingRight: 8 },
   eyeBtn: { padding: 4 },
   forgotWrap: { alignSelf: "flex-end" },
-  forgotText: { fontSize: 13, color: "#3E73EE", fontWeight: "500" },
+  forgotText: { fontSize: 13, color: "#146C94", fontWeight: "500" },
   errorText: { fontSize: 13, color: "#E7000B", textAlign: "center" },
   loginBtn: {
     height: 54,
-    backgroundColor: "#3E73EE",
+    backgroundColor: "#146C94",
     borderRadius: 14,
     flexDirection: "row",
     alignItems: "center",
@@ -230,5 +230,5 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   registerText: { fontSize: 14, color: "#737373" },
-  registerLink: { fontSize: 14, fontWeight: "600", color: "#3E73EE" },
+  registerLink: { fontSize: 14, fontWeight: "600", color: "#146C94" },
 });

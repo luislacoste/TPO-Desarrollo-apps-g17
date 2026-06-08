@@ -20,7 +20,7 @@ const navItems: { id: NavItem; label: string; icon: typeof Home }[] = [
 
 export function BottomNav({ active, onNavigate, notificationCount = 0 }: BottomNavProps) {
   return (
-    <nav className="absolute bottom-0 left-0 right-0 border-t pb-[34px]" style={{ background: '#FAFAFA', borderColor: '#E5E5E5' }}>
+    <nav className="absolute bottom-0 left-0 right-0 border-t pb-[34px]" style={{ background: '#AFD3E2', borderColor: '#8BBDD0' }}>
       <div className="flex items-center justify-around h-[56px]">
         {navItems.map((item) => {
           const Icon = item.icon
@@ -33,7 +33,7 @@ export function BottomNav({ active, onNavigate, notificationCount = 0 }: BottomN
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 px-3 py-1 relative transition-colors",
               )}
-              style={{ color: isActive ? '#3E73EE' : '#737373' }}
+              style={{ color: isActive ? '#0a3d54' : '#4A7B8C' }}
             >
               <div className="relative">
                 <Icon className={cn("w-5 h-5", isActive && "stroke-[2.5px]")} />

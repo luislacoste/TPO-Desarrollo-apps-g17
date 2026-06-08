@@ -23,7 +23,7 @@ export default function BottomNav({ active, onNavigate, notificationCount = 0 }:
       <View style={styles.inner}>
         {navItems.map((item) => {
           const isActive = active === item.id
-          const color = isActive ? '#3E73EE' : '#737373'
+          const color = isActive ? '#0a3d54' : '#146C94'
           return (
             <TouchableOpacity
               key={item.id}
@@ -54,9 +54,9 @@ export default function BottomNav({ active, onNavigate, notificationCount = 0 }:
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: '#AFD3E2',
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
+    borderTopColor: 'rgba(10,61,84,0.15)',
   },
   inner: {
     flexDirection: 'row',

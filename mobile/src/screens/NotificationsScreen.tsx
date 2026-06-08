@@ -6,9 +6,9 @@ import {
   FlatList,
   StyleSheet,
   SafeAreaView,
-  ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import BottomNav, { NavItem } from "../components/BottomNav";
 import { useAppData } from "../context/AppContext";
 
 interface Props {
@@ -41,8 +41,20 @@ function formatTimestamp(timestamp: string): string {
 }
 
 export default function NotificationsScreen({ navigation }: Props) {
-  const { notifications, refreshPrivateData, loading, error } = useAppData();
+  const { notifications, refreshPrivateData } = useAppData();
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleNavigate = (item: NavItem) => {
+    navigation.navigate(
+      item === "home"
+        ? "Home"
+        : item === "catalog"
+          ? "Catalog"
+          : item === "notifications"
+            ? "Notifications"
+            : "Profile",
+    );
+  };
 
   return (
     <SafeAreaView style={styles.root}>
@@ -56,32 +68,15 @@ export default function NotificationsScreen({ navigation }: Props) {
         </View>
         <View style={styles.actions}>
           <TouchableOpacity style={styles.actionBtn}>
-            <Feather name="check" size={18} color="#737373" />
+            <Feather name="check" size={18} color="#146C94" />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionBtn}>
-            <Feather name="trash-2" size={18} color="#737373" />
+            <Feather name="trash-2" size={18} color="#146C94" />
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Loading */}
-      {loading && notifications.length === 0 && (
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#3E73EE" />
-        </View>
-      )}
-
-      {/* Error */}
-      {!loading && error && notifications.length === 0 && (
-        <TouchableOpacity style={styles.errorState} onPress={refreshPrivateData} activeOpacity={0.8}>
-          <Feather name="wifi-off" size={32} color="#D4D4D4" />
-          <Text style={styles.errorTitle}>No se pudieron cargar</Text>
-          <Text style={styles.errorText}>{error}. Tocá para reintentar.</Text>
-        </TouchableOpacity>
-      )}
-
       {/* List */}
-      {(!loading || notifications.length > 0) && !error && (
       <FlatList
         data={notifications}
         keyExtractor={(item) => item.id}
@@ -131,13 +126,18 @@ export default function NotificationsScreen({ navigation }: Props) {
             </View>
             <Text style={styles.emptyTitle}>No hay notificaciones</Text>
             <Text style={styles.emptyText}>
-              Cuando haya alertas van a aparecer acá. Tocá para refrescar.
+              Cuando el backend genere alertas van a aparecer acá. Toca para
+              refrescar.
             </Text>
           </TouchableOpacity>
         }
       />
-      )}
 
+      <BottomNav
+        active="notifications"
+        onNavigate={handleNavigate}
+        notificationCount={unreadCount}
+      />
     </SafeAreaView>
   );
 }
@@ -151,17 +151,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
+    backgroundColor: "#AFD3E2",
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
+    borderBottomColor: "rgba(10,61,84,0.15)",
   },
-  title: { fontSize: 20, fontWeight: "700", color: "#0A0A0A" },
-  unreadText: { fontSize: 13, color: "#737373", marginTop: 2 },
+  title: { fontSize: 20, fontWeight: "700", color: "#0a3d54" },
+  unreadText: { fontSize: 13, color: "#146C94", marginTop: 2 },
   actions: { flexDirection: "row", gap: 4 },
   actionBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: "#F5F5F5",
+    backgroundColor: "rgba(255,255,255,0.3)",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#3E73EE",
+    backgroundColor: "#146C94",
     marginTop: 4,
     flexShrink: 0,
   },
@@ -222,8 +223,4 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 16, fontWeight: "600", color: "#0A0A0A" },
   emptyText: { fontSize: 13, color: "#737373", textAlign: "center" },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center", paddingTop: 80 },
-  errorState: { alignItems: "center", paddingTop: 80, gap: 10, paddingHorizontal: 32 },
-  errorTitle: { fontSize: 16, fontWeight: "600", color: "#0A0A0A" },
-  errorText: { fontSize: 13, color: "#737373", textAlign: "center" },
 });

@@ -79,28 +79,6 @@ export interface BackendMe {
   bidsBlocked: boolean
 }
 
-export interface BackendAuctionItem {
-  item_id: number
-  catalogo_id: number
-  producto_id: number
-  precio_base: string
-  comision: string
-  subastado: 'si' | 'no'
-  descripcion_catalogo: string | null
-  fotos_count: number
-}
-
-export interface BackendBidRow {
-  id: number
-  importe: string
-  ganador: boolean
-  item_id: number
-  asistente_id: number
-  cliente_id: number
-  numero_postor: number
-  subasta_id: number
-}
-
 export interface BackendMetrics {
   totalAuctions: number
   wonAuctions: number
@@ -136,35 +114,22 @@ export function getApiBaseUrl() {
   return `http://${inferHost()}:4000/v1`
 }
 
-export function getWsBaseUrl() {
-  return `ws://${inferHost()}:4000`
-}
-
-export class ApiError extends Error {
-  constructor(message: string, public readonly status: number) {
-    super(message)
-    this.name = 'ApiError'
-  }
-}
-
 async function request<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
   const headers = new Headers(init?.headers)
   if (!headers.has('Content-Type') && init?.body) headers.set('Content-Type', 'application/json')
   if (token) headers.set('Authorization', `Bearer ${token}`)
 
-  let response: Response
-  try {
-    response = await fetch(`${getApiBaseUrl()}${path}`, { ...init, headers })
-  } catch {
-    throw new ApiError('Sin conexión a Internet. Verificá tu red.', 0)
-  }
+  const response = await fetch(`${getApiBaseUrl()}${path}`, {
+    ...init,
+    headers,
+  })
 
   const isJson = response.headers.get('content-type')?.includes('application/json')
   const payload = isJson ? await response.json() : await response.text()
 
   if (!response.ok) {
     const message = typeof payload === 'string' ? payload : payload?.message ?? 'Error de red'
-    throw new ApiError(message, response.status)
+    throw new Error(message)
   }
 
   return payload as T
@@ -214,10 +179,6 @@ export const api = {
   getActiveAuctions: () => request<BackendAuction[]>('/auctions/active'),
   getUpcomingAuctions: () => request<BackendAuction[]>('/auctions/upcoming'),
   listAuctions: () => request<{ items: BackendAuction[]; page: number; limit: number; total: number }>('/auctions'),
-
-  getAuctionById: (id: number) => request<BackendAuction>(`/auctions/${id}`),
-  getAuctionCatalog: (id: number) => request<BackendAuctionItem[]>(`/auctions/${id}/catalog`),
-  getBidsForAuction: (id: number) => request<BackendBidRow[]>(`/bids/auction/${id}`),
 
   getMe: (token: string) => request<BackendMe>('/users/me', undefined, token),
   getMyMetrics: (token: string) => request<BackendMetrics>('/users/me/metrics', undefined, token),

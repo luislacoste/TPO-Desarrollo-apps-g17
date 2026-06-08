@@ -6,9 +6,9 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
-  ActivityIndicator,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import BottomNav, { NavItem } from "../components/BottomNav";
 import CategoryBadge from "../components/CategoryBadge";
 import { useAppData } from "../context/AppContext";
 
@@ -29,52 +29,36 @@ const MENU_ITEMS = [
   { icon: "credit-card", label: "Medios de Pago", screen: "Payments" },
   { icon: "package", label: "Mis Articulos", screen: null },
   { icon: "heart", label: "Favoritos", screen: null },
-  { icon: "settings", label: "Configuracion", screen: null },
-  { icon: "help-circle", label: "Ayuda y Soporte", screen: null },
+  { icon: "settings", label: "Configuracion", screen: "Settings" },
 ];
 
 export default function ProfileScreen({ navigation }: Props) {
-  const { me, metrics, logout, loading, error, refreshPrivateData } = useAppData();
+  const { me, metrics, notifications, logout } = useAppData();
+  const unreadCount = notifications.filter((n) => !n.read).length;
   const successRate =
     metrics && metrics.totalAuctions > 0
       ? ((metrics.wonAuctions / metrics.totalAuctions) * 100).toFixed(0)
       : "0";
 
-  if (loading && !me) {
-    return (
-      <SafeAreaView style={styles.root}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Mi Perfil</Text>
-        </View>
-        <View style={styles.centered}>
-          <ActivityIndicator size="large" color="#3E73EE" />
-        </View>
-      </SafeAreaView>
-    )
-  }
-
-  if (!loading && error && !me) {
-    return (
-      <SafeAreaView style={styles.root}>
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Mi Perfil</Text>
-        </View>
-        <TouchableOpacity style={styles.centered} onPress={refreshPrivateData} activeOpacity={0.8}>
-          <Feather name="wifi-off" size={32} color="#D4D4D4" />
-          <Text style={styles.errorTitle}>No se pudo cargar el perfil</Text>
-          <Text style={styles.errorText}>{error}. Tocá para reintentar.</Text>
-        </TouchableOpacity>
-      </SafeAreaView>
-    )
-  }
+  const handleNavigate = (item: NavItem) => {
+    navigation.navigate(
+      item === "home"
+        ? "Home"
+        : item === "catalog"
+          ? "Catalog"
+          : item === "notifications"
+            ? "Notifications"
+            : "Profile",
+    );
+  };
 
   return (
     <SafeAreaView style={styles.root}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Mi Perfil</Text>
-        <TouchableOpacity style={styles.settingsBtn}>
-          <Feather name="settings" size={20} color="#0A0A0A" />
+        <TouchableOpacity style={styles.settingsBtn} onPress={() => navigation.navigate('Settings')}>
+          <Feather name="settings" size={20} color="#0a3d54" />
         </TouchableOpacity>
       </View>
 
@@ -113,7 +97,7 @@ export default function ProfileScreen({ navigation }: Props) {
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={[styles.statValue, { color: "#3E73EE" }]}>
+                <Text style={[styles.statValue, { color: "#146C94" }]}>
                   {metrics?.wonAuctions ?? 0}
                 </Text>
                 <Text style={styles.statLabel}>Ganadas</Text>
@@ -137,7 +121,7 @@ export default function ProfileScreen({ navigation }: Props) {
             {/* Total Pujas */}
             <View style={styles.metricCard}>
               <View style={styles.metricIconWrap}>
-                <Feather name="activity" size={16} color="#3E73EE" />
+                <Feather name="activity" size={16} color="#146C94" />
               </View>
               <Text style={styles.metricLabel}>Total Pujas</Text>
               <Text style={styles.metricValue}>{metrics?.totalBids ?? 0}</Text>
@@ -226,6 +210,11 @@ export default function ProfileScreen({ navigation }: Props) {
         <View style={{ height: 16 }} />
       </ScrollView>
 
+      <BottomNav
+        active="profile"
+        onNavigate={handleNavigate}
+        notificationCount={unreadCount}
+      />
     </SafeAreaView>
   );
 }
@@ -239,21 +228,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
+    backgroundColor: "#AFD3E2",
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(10,61,84,0.15)",
   },
-  headerTitle: { fontSize: 20, fontWeight: "700", color: "#0A0A0A" },
+  headerTitle: { fontSize: 20, fontWeight: "700", color: "#0a3d54" },
   settingsBtn: { padding: 6 },
   scroll: { flex: 1 },
   profileSection: {
     paddingHorizontal: 16,
-    paddingBottom: 8,
-    backgroundColor: "#F0F4FF",
-    paddingTop: 8,
+    paddingBottom: 16,
+    backgroundColor: "#AFD3E2",
+    paddingTop: 12,
   },
   profileCard: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "rgba(255,255,255,0.38)",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#E5E5E5",
+    borderColor: "rgba(255,255,255,0.65)",
     padding: 16,
     gap: 12,
   },
@@ -262,7 +254,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 16,
-    backgroundColor: "#0A0A0A",
+    backgroundColor: "#0a3d54",
     alignItems: "center",
     justifyContent: "center",
   },
@@ -274,7 +266,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#E5E5E5",
+    borderTopColor: "rgba(255,255,255,0.5)",
   },
   statItem: { flex: 1, alignItems: "center", gap: 2 },
   statDivider: { width: 1, backgroundColor: "#E5E5E5" },
@@ -286,7 +278,7 @@ const styles = StyleSheet.create({
   },
   statLabel: { fontSize: 10, color: "#737373" },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 3 },
-  section: { paddingHorizontal: 16, paddingTop: 20, gap: 12 },
+  section: { paddingHorizontal: 16, paddingTop: 32, gap: 12 },
   sectionTitle: { fontSize: 16, fontWeight: "600", color: "#0A0A0A" },
   metricsGrid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   metricCard: {
@@ -373,9 +365,4 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   logoutLabel: { fontSize: 15, fontWeight: "500", color: "#E7000B" },
-  centered: {
-    flex: 1, alignItems: "center", justifyContent: "center", gap: 10, paddingHorizontal: 32,
-  },
-  errorTitle: { fontSize: 16, fontWeight: "600", color: "#0A0A0A" },
-  errorText: { fontSize: 13, color: "#737373", textAlign: "center" },
 });

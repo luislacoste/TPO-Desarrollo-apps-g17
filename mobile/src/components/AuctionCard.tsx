@@ -31,7 +31,7 @@ export default function AuctionCard({ auction, onPress }: AuctionCardProps) {
     },
     upcoming: {
       label: "PROXIMA",
-      bg: "#3E73EE",
+      bg: "#146C94",
       text: "#FFFFFF",
       thumbBg: "#EFF6FF",
     },
@@ -65,7 +65,7 @@ export default function AuctionCard({ auction, onPress }: AuctionCardProps) {
           <Feather
             name={isLive ? "play" : isEnded ? "check-circle" : "calendar"}
             size={32}
-            color={isEnded ? "#737373" : "#3E73EE"}
+            color={isEnded ? "#737373" : "#146C94"}
             style={{ opacity: 0.3 }}
           />
         </View>
