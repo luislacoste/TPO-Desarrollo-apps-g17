@@ -30,6 +30,47 @@ Para visualizarla localmente, requiere tener [Docker](https://www.docker.com/get
 
 Una vez iniciado, abrir en el navegador: [http://localhost:8080](http://localhost:8080)
 
+## Testing de la API
+
+El script `test-all.sh` (en la raíz del proyecto) recorre todos los endpoints del backend de forma automatizada y reporta cuántos pasan y cuántos fallan.
+
+### Requisitos previos
+
+- El backend debe estar corriendo (`npm run dev` dentro de `backend/`).
+- Tener instalado [`jq`](https://jqlang.github.io/jq/) para parsear respuestas JSON.
+- `psql` en el PATH (solo necesario con `--reset`).
+
+### Uso
+
+**Opción A — primera vez o para resetear la base de datos:**
+
+```bash
+./test-all.sh --reset
+```
+
+Hace `DROP SCHEMA public CASCADE`, recrea las tablas, corre el seed de admin y carga datos de prueba antes de ejecutar los tests.
+
+**Opción B — base de datos ya inicializada:**
+
+```bash
+./test-all.sh
+```
+
+Asume que ya existen las tablas y datos base. Recomendado para correr los tests repetidamente sin limpiar la DB.
+
+### Qué hace el script
+
+Ejecuta 15 fases en orden: registro de usuario, completado de perfil, login, gestión de subastas, pujas, solicitudes de venta, métodos de pago, multas, módulo admin, métricas, favoritos y WebSocket. Al final imprime un resumen con el total de pruebas pasadas y fallidas. El exit code es igual a la cantidad de fallos (0 = todo ok).
+
+### Cargar solo datos de prueba
+
+Si querés insertar los datos de prueba sin correr los tests (martillero demo, dueño demo, subasta abierta, producto e ítem con precio base 10 000):
+
+```bash
+cd backend
+npm run seed:test
+```
+
 ## Diseño
 
 **Figma:** [Ver prototipo](https://www.figma.com/design/MilTc5kyxGngKFrA9C6VPs/Untitled?node-id=0-1&p=f&t=lVeUcUocRy4KpKcf-0)

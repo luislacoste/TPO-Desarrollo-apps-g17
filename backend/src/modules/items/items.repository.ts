@@ -104,10 +104,10 @@ export async function listItemPhotos(itemId: number) {
   const { rows } = await query<PhotoRow>(
     `SELECT f.identificador AS id,
             f.producto      AS producto_id,
-            CONCAT('/v1/items/', $1::text, '/images/', f.identificador) AS url
+            '/v1/items/' || $1::text || '/images/' || f.identificador::text AS url
        FROM fotos f
        JOIN itemscatalogo ic ON ic.producto = f.producto
-      WHERE ic.identificador = $1
+      WHERE ic.identificador = $1::int
       ORDER BY f.identificador`,
     [itemId],
   );

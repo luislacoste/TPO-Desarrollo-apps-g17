@@ -8,6 +8,9 @@
  * Pre-condición: ya se aplicaron `db/schema.sql`, `db/schema_complemento.sql`
  * y `db/seed.sql` (que crea persona/empleado id=1).
  */
+import path from 'path';
+import dotenv from 'dotenv';
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 import { pool } from '../db';
 import { hashPassword } from '../services/hash';
 
