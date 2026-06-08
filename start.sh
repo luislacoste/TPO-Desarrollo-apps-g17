@@ -165,6 +165,20 @@ else
   warn "backend/package.json no existe — salto backend."
 fi
 
+# ─── Mobile (Expo) ─────────────────────────────────────────────────────────────
+if [ -d "mobile" ] && [ -f "mobile/package.json" ]; then
+  log "Mobile: instalando dependencias si hace falta..."
+  pushd mobile >/dev/null
+  [ ! -d "node_modules" ] && npm install
+
+  log "Mobile: arrancando Expo (escaneá el QR con Expo Go)"
+  npm start &
+  PIDS+=($!)
+  popd >/dev/null
+else
+  warn "No se encontró mobile/package.json — salto mobile."
+fi
+
 if [ "${#PIDS[@]}" -eq 0 ]; then
   err "No se levantó ningún servicio."
   exit 1
