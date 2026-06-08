@@ -71,17 +71,6 @@ export default function HomeScreen({ navigation }: Props) {
   const filteredActive = activeAuctions.filter(a => !q || a.title.toLowerCase().includes(q))
   const filteredUpcoming = upcomingAuctions.filter(a => !q || a.title.toLowerCase().includes(q))
 
-  const handleNavigate = (item: NavItem) => {
-    navigation.navigate(
-      item === "home"
-        ? "Home"
-        : item === "catalog"
-          ? "Catalog"
-          : item === "notifications"
-            ? "Notifications"
-            : "Profile",
-    );
-  };
 
   return (
     <SafeAreaView style={styles.root}>

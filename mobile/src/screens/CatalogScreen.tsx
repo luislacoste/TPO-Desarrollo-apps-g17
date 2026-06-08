@@ -23,7 +23,7 @@ const STATUS_TABS: { id: FilterStatus; label: string }[] = [
   { id: "ended", label: "Finalizadas" },
 ];
 
-const CATEGORIES: UiCategory[] = ["bronce", "plata", "oro", "platino"];
+const CATEGORIES: UiCategory[] = ["bronce" as UiCategory, "plata", "oro", "platino"];
 
 interface Props {
   navigation: any;
