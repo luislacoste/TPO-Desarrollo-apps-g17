@@ -92,7 +92,7 @@ export default function RegisterScreen({ navigation }: Props) {
     if (currentStep < 5) {
       setCurrentStep((currentStep + 1) as Step)
     } else {
-      navigation.replace('Home')
+      navigation.replace('Login')
     }
   }
 

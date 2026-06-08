@@ -28,7 +28,7 @@ export default function LoginScreen({ navigation }: Props) {
     if (!email || !password || authLoading) return;
     try {
       await login(email, password);
-      navigation.replace("Home");
+      navigation.replace("Main");
     } catch {
       // El mensaje visible queda en el contexto.
     }
