@@ -21,21 +21,13 @@ type CategoryStyle = {
 };
 
 const categoryStyles: Record<UiCategory, CategoryStyle> = {
-  comun: {
-    label: "Comun",
-    bg: "#F5F5F5",
-    text: "#737373",
-    border: "#E5E5E5",
+  bronce: {
+    label: "Bronce",
+    bg: "#FEF3C7",
+    text: "#92400E",
+    border: "#FDE68A",
     iconSet: "feather",
     iconName: "circle",
-  },
-  especial: {
-    label: "Especial",
-    bg: "#EFF6FF",
-    text: "#146C94",
-    border: "#BFDBFE",
-    iconSet: "feather",
-    iconName: "star",
   },
   plata: {
     label: "Plata",
