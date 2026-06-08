@@ -66,7 +66,7 @@ export default function ProfileScreen({ navigation }: Props) {
                 <Text style={styles.userEmail}>{me?.email ?? ""}</Text>
                 <View style={{ marginTop: 6 }}>
                   <CategoryBadge
-                    category={me?.category ?? "bronce"}
+                    category={me?.category ?? "comun"}
                     size="sm"
                   />
                 </View>

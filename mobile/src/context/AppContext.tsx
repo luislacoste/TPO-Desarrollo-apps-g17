@@ -16,7 +16,7 @@ import {
   BackendCategory,
 } from "../lib/api";
 
-export type UiCategory = BackendCategory | "comun" | "especial";
+export type UiCategory = BackendCategory;
 
 export interface UiAuction {
   id: string;
@@ -94,7 +94,7 @@ function mapAuction(
   const live = source === "active" || (row.estado === "abierta" && date <= now);
   const status =
     row.estado === "cerrada" ? "ended" : live ? "live" : "upcoming";
-  const category = row.categoria ?? "bronce";
+  const category = row.categoria ?? "comun";
   const categoryLabel = category.charAt(0).toUpperCase() + category.slice(1);
   const descriptionParts = [
     row.subastador_nombre ? `Subastador: ${row.subastador_nombre}` : null,

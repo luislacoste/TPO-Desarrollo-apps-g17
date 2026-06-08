@@ -105,7 +105,7 @@ export default function AuctionLiveScreen({ navigation, route }: Props) {
   const auctioneerInitial = (auction?.auctioneer ?? 'S').charAt(0).toUpperCase()
   const categoryLabel = auction?.category
     ? auction.category.charAt(0).toUpperCase() + auction.category.slice(1)
-    : 'Bronce'
+    : 'Común'
 
   return (
     <SafeAreaView style={styles.root}>
