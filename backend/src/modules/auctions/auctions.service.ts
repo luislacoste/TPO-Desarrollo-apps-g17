@@ -126,6 +126,52 @@ export async function join(clienteId: number, subastaId: number) {
   };
 }
 
+export async function create(data: {
+  fecha: string;
+  hora: string;
+  estado?: string;
+  subastadorId?: number;
+  ubicacion?: string;
+  categoria?: string;
+  moneda?: string;
+  capacidadAsistentes?: number;
+  tieneDeposito?: string;
+  seguridadPropia?: string;
+}) {
+  if (!data.fecha) throw new UnprocessableEntity('fecha es requerida');
+  if (!data.hora)  throw new UnprocessableEntity('hora es requerida');
+
+  const VALID_ESTADOS    = ['abierta', 'cerrada'];
+  const VALID_CATEGORIAS = ['bronce', 'plata', 'oro', 'platino'];
+  const VALID_MONEDAS    = ['ARS', 'USD'];
+
+  if (data.estado && !VALID_ESTADOS.includes(data.estado)) {
+    throw new UnprocessableEntity(`estado inválido: ${data.estado}`);
+  }
+  if (data.categoria && !VALID_CATEGORIAS.includes(data.categoria)) {
+    throw new UnprocessableEntity(`categoria inválida: ${data.categoria}`);
+  }
+  if (data.moneda && !VALID_MONEDAS.includes(data.moneda)) {
+    throw new UnprocessableEntity(`moneda inválida: ${data.moneda}`);
+  }
+
+  const id = await repo.insertSubasta({
+    fecha:               data.fecha,
+    hora:                data.hora,
+    estado:              (data.estado as 'abierta' | 'cerrada') ?? 'abierta',
+    subastador:          data.subastadorId,
+    ubicacion:           data.ubicacion,
+    categoria:           data.categoria as 'bronce' | 'plata' | 'oro' | 'platino' | undefined,
+    moneda:              (data.moneda as 'ARS' | 'USD') ?? 'ARS',
+    capacidadasistentes: data.capacidadAsistentes,
+    tienedeposito:       data.tieneDeposito as 'si' | 'no' | undefined,
+    seguridadpropia:     data.seguridadPropia as 'si' | 'no' | undefined,
+  });
+
+  const subasta = await repo.findSubastaById(id);
+  return subasta!;
+}
+
 export async function getStreamUrl(subastaId: number) {
   const auction = await repo.findSubastaById(subastaId);
   if (!auction) throw new NotFound('Subasta no encontrada');

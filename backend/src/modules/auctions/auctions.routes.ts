@@ -6,10 +6,12 @@
 import { Router } from 'express';
 import * as ctrl from './auctions.controller';
 import { auth } from '../../middleware/auth';
+import { requireRole } from '../../middleware/requireRole';
 import { asyncHandler } from '../../utils/asyncHandler';
 
 const router = Router();
 
+router.post('/',        auth, requireRole('admin'), asyncHandler(ctrl.create));
 router.get('/',         asyncHandler(ctrl.list));
 router.get('/active',   asyncHandler(ctrl.listActive));
 router.get('/upcoming', asyncHandler(ctrl.listUpcoming));

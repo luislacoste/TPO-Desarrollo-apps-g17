@@ -222,3 +222,39 @@ export async function getClienteCategoria(clienteId: number): Promise<string | n
   );
   return rows[0]?.categoria ?? null;
 }
+
+export interface CreateSubastaInput {
+  fecha: string;
+  hora: string;
+  estado?: 'abierta' | 'cerrada';
+  subastador?: number;
+  ubicacion?: string;
+  categoria?: 'bronce' | 'plata' | 'oro' | 'platino';
+  moneda?: 'ARS' | 'USD';
+  capacidadasistentes?: number;
+  tienedeposito?: 'si' | 'no';
+  seguridadpropia?: 'si' | 'no';
+}
+
+export async function insertSubasta(data: CreateSubastaInput): Promise<number> {
+  const { rows } = await query<{ id: number }>(
+    `INSERT INTO subastas
+       (fecha, hora, estado, subastador, ubicacion, categoria, moneda,
+        capacidadasistentes, tienedeposito, seguridadpropia)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+     RETURNING identificador AS id`,
+    [
+      data.fecha,
+      data.hora,
+      data.estado ?? 'abierta',
+      data.subastador ?? null,
+      data.ubicacion ?? null,
+      data.categoria ?? null,
+      data.moneda ?? 'ARS',
+      data.capacidadasistentes ?? null,
+      data.tienedeposito ?? null,
+      data.seguridadpropia ?? null,
+    ],
+  );
+  return rows[0].id;
+}

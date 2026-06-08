@@ -39,6 +39,19 @@ export async function getCatalog(req: Request, res: Response) {
   res.json(await svc.getCatalog(paramId(req)));
 }
 
+export async function create(req: Request, res: Response) {
+  const {
+    fecha, hora, estado, subastadorId, ubicacion,
+    categoria, moneda, capacidadAsistentes, tieneDeposito, seguridadPropia,
+  } = req.body ?? {};
+
+  const result = await svc.create({
+    fecha, hora, estado, subastadorId, ubicacion,
+    categoria, moneda, capacidadAsistentes, tieneDeposito, seguridadPropia,
+  });
+  res.status(201).json(result);
+}
+
 export async function join(req: Request, res: Response) {
   if (!req.user) throw new Unauthorized();
   const result = await svc.join(req.user.sub, paramId(req));
