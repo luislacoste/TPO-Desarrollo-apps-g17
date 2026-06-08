@@ -15,6 +15,7 @@ import * as repo from './admin.repository';
 import * as pmRepo from '../payment-methods/payment-methods.repository';
 import * as sellRepo from '../sell-requests/sell-requests.repository';
 import * as paymentsRepo from '../payments/payments.repository';
+import * as auctionsRepo from '../auctions/auctions.repository';
 import { env } from '../../config/env';
 import { BadRequest, Conflict, NotFound, UnprocessableEntity } from '../../utils/errors';
 
@@ -259,6 +260,69 @@ export async function applyFine(
 
   const fine = await repo.findFineById(fineId);
   return toFineResponse(fine!);
+}
+
+// ─── Cierre de subasta ────────────────────────────────────────────────
+
+const PAYMENT_DUE_DAYS = 7;
+
+export async function closeAuction(_actorId: number, subastaId: number) {
+  const auction = await auctionsRepo.findSubastaById(subastaId);
+  if (!auction) throw new NotFound('Subasta no encontrada');
+  if (auction.estado !== 'abierta') {
+    throw new Conflict(`La subasta ya está ${auction.estado}`);
+  }
+
+  const items = await auctionsRepo.getAuctionItemsWithBids(subastaId);
+
+  const adjudicated: { itemId: number; clienteId: number; importe: number; registroId: number; paymentId: number }[] = [];
+  const skipped: { itemId: number; reason: string }[] = [];
+
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + PAYMENT_DUE_DAYS);
+  const dueDateStr = dueDate.toISOString().slice(0, 10);
+
+  await withTransaction(async (client) => {
+    for (const item of items) {
+      if (item.subastado === 'si') {
+        skipped.push({ itemId: item.item_id, reason: 'ya subastado' });
+        continue;
+      }
+      if (!item.pujo_id || !item.cliente_id || !item.importe) {
+        skipped.push({ itemId: item.item_id, reason: 'sin pujas' });
+        continue;
+      }
+
+      const importe  = Number(item.importe);
+      const comision = Number(item.comision);
+
+      const registroId = await auctionsRepo.insertRegistroDeSubasta(client, {
+        subastaId,
+        duenioId:   item.duenio_id,
+        productoId: item.producto_id,
+        clienteId:  item.cliente_id,
+        importe,
+        comision,
+      });
+
+      const paymentId = await paymentsRepo.insertAuctionPayment(client, {
+        clienteId:           item.cliente_id,
+        registrodesubastaId: registroId,
+        monto:               importe,
+        moneda:              auction.moneda,
+        dueDate:             dueDateStr,
+      });
+
+      await auctionsRepo.markItemSubastado(client, item.item_id);
+      await auctionsRepo.markBidGanador(client, item.pujo_id);
+
+      adjudicated.push({ itemId: item.item_id, clienteId: item.cliente_id, importe, registroId, paymentId });
+    }
+
+    await auctionsRepo.closeAuction(client, subastaId);
+  });
+
+  return { auctionId: subastaId, estado: 'cerrada', adjudicated, skipped };
 }
 
 // ─── Medios de pago (admin) ───────────────────────────────────────────

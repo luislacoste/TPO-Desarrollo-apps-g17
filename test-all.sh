@@ -336,6 +336,29 @@ RES=$(curl_capture "$API/bids/my/won" -H "Authorization: Bearer $USER_TOKEN")
 assert_status "GET /bids/my/won" 200 "$(split_code "$RES")"
 
 # =====================================================================
+# 7b. Cierre de subasta (admin)
+# =====================================================================
+step "7b. Cierre de subasta"
+
+RES=$(curl_capture -X POST "$API/admin/auctions/$SUBASTA_ID/close" \
+  -H "Authorization: Bearer $ADMIN_TOKEN")
+assert_status "POST /admin/auctions/:id/close" 200 "$(split_code "$RES")"
+ESTADO_CLOSED=$(split_body "$RES" | jq -r '.estado // empty')
+[ "$ESTADO_CLOSED" = "cerrada" ] \
+  && printf "  ${G}✓${N} subasta marcada como cerrada\n" && PASS=$((PASS+1)) \
+  || { printf "  ${R}✗${N} esperado estado=cerrada, obtuvo '%s'\n" "$ESTADO_CLOSED"; FAIL=$((FAIL+1)); FAILS+=("cierre: estado esperado cerrada"); }
+
+CLOSE_PAY_ID=$(split_body "$RES" | jq -r '.adjudicated[0].paymentId // empty')
+[ -n "$CLOSE_PAY_ID" ] \
+  && printf "  ${G}✓${N} pago de adjudicación generado (id=%s)\n" "$CLOSE_PAY_ID" && PASS=$((PASS+1)) \
+  || { printf "  ${R}✗${N} no se generó pago de adjudicación\n"; FAIL=$((FAIL+1)); FAILS+=("cierre: sin paymentId en adjudicated"); }
+
+# Segundo intento → 409 (ya cerrada)
+RES=$(curl_capture -X POST "$API/admin/auctions/$SUBASTA_ID/close" \
+  -H "Authorization: Bearer $ADMIN_TOKEN")
+assert_status "POST /admin/auctions/:id/close (ya cerrada) → 409" 409 "$(split_code "$RES")"
+
+# =====================================================================
 # 8. Perfil + métricas
 # =====================================================================
 step "8. Users y Metrics"

@@ -141,6 +141,25 @@ export async function insertPayment(data: {
   return rows[0].id;
 }
 
+export async function insertAuctionPayment(
+  client: PoolClient,
+  data: {
+    clienteId: number;
+    registrodesubastaId: number;
+    monto: number;
+    moneda: string;
+    dueDate: string;
+  },
+): Promise<number> {
+  const { rows } = await client.query<{ id: number }>(
+    `INSERT INTO pagos (cliente_id, registrodesubasta_id, monto, moneda, estado, due_date)
+     VALUES ($1, $2, $3, $4, 'pending', $5)
+     RETURNING identificador AS id`,
+    [data.clienteId, data.registrodesubastaId, data.monto, data.moneda, data.dueDate],
+  );
+  return rows[0].id;
+}
+
 // ─── Helper interno: ¿el medio de pago pertenece al cliente? ──────────
 
 export async function medioPagoBelongsTo(medioPagoId: number, clienteId: number): Promise<boolean> {

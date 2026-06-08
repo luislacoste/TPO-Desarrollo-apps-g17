@@ -223,6 +223,93 @@ export async function getClienteCategoria(clienteId: number): Promise<string | n
   return rows[0]?.categoria ?? null;
 }
 
+// ─── Cierre de subasta ────────────────────────────────────────────────
+
+export interface AuctionItemWithBid {
+  item_id: number;
+  producto_id: number;
+  comision: string;
+  subastado: 'si' | 'no' | null;
+  duenio_id: number;
+  pujo_id: number | null;
+  importe: string | null;
+  cliente_id: number | null;
+}
+
+export async function getAuctionItemsWithBids(subastaId: number) {
+  const { rows } = await query<AuctionItemWithBid>(`
+    SELECT ic.identificador        AS item_id,
+           ic.producto             AS producto_id,
+           ic.comision,
+           ic.subastado,
+           pr.duenio               AS duenio_id,
+           best.pujo_id,
+           best.importe,
+           best.cliente_id
+      FROM catalogos     c
+      JOIN itemscatalogo ic ON ic.catalogo      = c.identificador
+      JOIN productos     pr ON pr.identificador = ic.producto
+      LEFT JOIN LATERAL (
+        SELECT pj.identificador AS pujo_id,
+               pj.importe,
+               a.cliente        AS cliente_id
+          FROM pujos      pj
+          JOIN asistentes a  ON a.identificador = pj.asistente
+         WHERE pj.item = ic.identificador
+         ORDER BY pj.importe DESC
+         LIMIT 1
+      ) best ON TRUE
+     WHERE c.subasta = $1
+     ORDER BY ic.identificador`,
+    [subastaId],
+  );
+  return rows;
+}
+
+import type { PoolClient } from 'pg';
+
+export async function closeAuction(client: PoolClient, subastaId: number) {
+  const { rowCount } = await client.query(
+    `UPDATE subastas SET estado = 'cerrada' WHERE identificador = $1 AND estado = 'abierta'`,
+    [subastaId],
+  );
+  return rowCount ?? 0;
+}
+
+export async function markItemSubastado(client: PoolClient, itemId: number) {
+  await client.query(
+    `UPDATE itemscatalogo SET subastado = 'si' WHERE identificador = $1`,
+    [itemId],
+  );
+}
+
+export async function markBidGanador(client: PoolClient, pujoId: number) {
+  await client.query(
+    `UPDATE pujos SET ganador = 'si' WHERE identificador = $1`,
+    [pujoId],
+  );
+}
+
+export async function insertRegistroDeSubasta(
+  client: PoolClient,
+  data: {
+    subastaId: number;
+    duenioId: number;
+    productoId: number;
+    clienteId: number;
+    importe: number;
+    comision: number;
+  },
+): Promise<number> {
+  const { rows } = await client.query<{ id: number }>(
+    `INSERT INTO registrodesubasta (subasta, duenio, producto, cliente, importe, comision)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     RETURNING identificador AS id`,
+    [data.subastaId, data.duenioId, data.productoId, data.clienteId, data.importe, data.comision],
+  );
+  return rows[0].id;
+}
+
 export interface CreateSubastaInput {
   fecha: string;
   hora: string;

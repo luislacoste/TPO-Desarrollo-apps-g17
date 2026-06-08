@@ -25,6 +25,9 @@ router.patch('/users/:id/admission',              asyncHandler(ctrl.changeAdmiss
 router.post ('/users/:id/block-participation',    asyncHandler(ctrl.blockParticipation));
 router.post ('/users/:id/unblock-participation',  asyncHandler(ctrl.unblockParticipation));
 
+// ─── Subastas ─────────────────────────────────────────────────────────
+router.post ('/auctions/:id/close',         asyncHandler(ctrl.closeAuction));
+
 // ─── Medios de pago ───────────────────────────────────────────────────
 router.post ('/payment-methods/:id/verify', asyncHandler(ctrl.verifyPaymentMethod));
 

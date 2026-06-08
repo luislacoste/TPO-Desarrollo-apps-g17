@@ -35,6 +35,8 @@ export async function placeBid(clienteId: number, input: PlaceBidInput) {
     throw new UnprocessableEntity('importe inválido');
   }
 
+  await assertCanParticipate(clienteId);
+
   const ctx = await repo.getItemBidContext(input.itemId);
   if (!ctx) throw new NotFound('Item no encontrado');
   if (ctx.subasta_estado !== 'abierta') {
@@ -43,8 +45,6 @@ export async function placeBid(clienteId: number, input: PlaceBidInput) {
   if (ctx.subastado === 'si') {
     throw new Conflict('El item ya fue subastado');
   }
-
-  await assertCanParticipate(clienteId);
 
   // Tiene que estar inscripto como asistente.
   const asistencia = await auctionsRepo.findAsistencia(clienteId, ctx.subasta_id);

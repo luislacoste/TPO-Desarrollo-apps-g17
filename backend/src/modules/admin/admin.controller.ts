@@ -75,6 +75,12 @@ export async function unblockParticipation(req: Request, res: Response) {
   res.json(await svc.unblockParticipation(actorId(req), paramId(req)));
 }
 
+// ─── Subastas ─────────────────────────────────────────────────────────
+
+export async function closeAuction(req: Request, res: Response) {
+  res.json(await svc.closeAuction(actorId(req), paramId(req)));
+}
+
 // ─── Medios de pago ───────────────────────────────────────────────────
 
 export async function verifyPaymentMethod(req: Request, res: Response) {
