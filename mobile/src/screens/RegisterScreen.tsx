@@ -81,7 +81,7 @@ export default function RegisterScreen({ navigation }: Props) {
       setCurrentStep((currentStep + 1) as Step)
       setFieldErrors({})
     } else {
-      navigation.replace('Login')
+      navigation.replace('Home')
     }
   }
 

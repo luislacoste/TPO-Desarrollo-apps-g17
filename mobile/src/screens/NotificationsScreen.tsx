@@ -8,6 +8,7 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import BottomNav, { NavItem } from "../components/BottomNav";
 import { useAppData } from "../context/AppContext";
 
 interface Props {
@@ -42,6 +43,18 @@ function formatTimestamp(timestamp: string): string {
 export default function NotificationsScreen({ navigation }: Props) {
   const { notifications, refreshPrivateData } = useAppData();
   const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const handleNavigate = (item: NavItem) => {
+    navigation.navigate(
+      item === "home"
+        ? "Home"
+        : item === "catalog"
+          ? "Catalog"
+          : item === "notifications"
+            ? "Notifications"
+            : "Profile",
+    );
+  };
 
   return (
     <SafeAreaView style={styles.root}>
@@ -120,6 +133,11 @@ export default function NotificationsScreen({ navigation }: Props) {
         }
       />
 
+      <BottomNav
+        active="notifications"
+        onNavigate={handleNavigate}
+        notificationCount={unreadCount}
+      />
     </SafeAreaView>
   );
 }

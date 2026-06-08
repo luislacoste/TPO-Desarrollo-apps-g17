@@ -10,6 +10,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import BottomNav, { NavItem } from "../components/BottomNav";
 import { useAppData } from "../context/AppContext";
 
 function formatRelativeDate(dateString: string): string {
@@ -252,6 +253,12 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={{ height: 16 }} />
       </ScrollView>
 
+      {/* Bottom nav */}
+      <BottomNav
+        active="home"
+        onNavigate={handleNavigate}
+        notificationCount={unreadCount}
+      />
     </SafeAreaView>
   );
 }
