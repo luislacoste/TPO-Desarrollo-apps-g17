@@ -238,9 +238,31 @@ psql_run "UPDATE medios_pago SET verificado = TRUE WHERE identificador = $MEDIO_
   >/dev/null 2>&1 || note "psql falló: chequeá DB_* en backend/.env"
 
 # =====================================================================
-# 6. Browsing público
+# 6. Crear subasta (admin) + browsing público
 # =====================================================================
-step "6. Browsing público"
+step "6. Crear subasta (admin)"
+
+RES=$(curl_capture -X POST "$API/auctions" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "fecha": "2026-12-01",
+    "hora": "15:00",
+    "estado": "abierta",
+    "ubicacion": "Salón Test",
+    "categoria": "bronce",
+    "moneda": "ARS"
+  }')
+assert_status "POST /auctions (admin)" 201 "$(split_code "$RES")"
+NEW_SUBASTA_ID=$(split_body "$RES" | jq -r '.id')
+
+RES=$(curl_capture -X POST "$API/auctions" \
+  -H "Authorization: Bearer $USER_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"fecha":"2026-12-02","hora":"10:00"}')
+assert_status "POST /auctions (user) → 403" 403 "$(split_code "$RES")"
+
+step "6b. Browsing público"
 
 for path in /categories /categories/plata \
             /auctions /auctions/active /auctions/upcoming \
