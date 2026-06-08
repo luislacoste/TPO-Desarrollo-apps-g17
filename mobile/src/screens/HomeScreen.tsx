@@ -164,7 +164,7 @@ export default function HomeScreen({ navigation }: Props) {
             <TouchableOpacity
               key={auction.id}
               style={styles.auctionItem}
-              onPress={() => navigation.navigate("Catalog")}
+              onPress={() => navigation.navigate("LiveAuction", { auction })}
               activeOpacity={0.8}
             >
               {/* Icon box */}

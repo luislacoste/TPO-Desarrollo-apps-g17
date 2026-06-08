@@ -79,6 +79,28 @@ export interface BackendMe {
   bidsBlocked: boolean
 }
 
+export interface BackendAuctionItem {
+  item_id: number
+  catalogo_id: number
+  producto_id: number
+  precio_base: string
+  comision: string
+  subastado: 'si' | 'no'
+  descripcion_catalogo: string | null
+  fotos_count: number
+}
+
+export interface BackendBidRow {
+  id: number
+  importe: string
+  ganador: boolean
+  item_id: number
+  asistente_id: number
+  cliente_id: number
+  numero_postor: number
+  subasta_id: number
+}
+
 export interface BackendMetrics {
   totalAuctions: number
   wonAuctions: number
@@ -112,6 +134,10 @@ function inferHost(): string {
 
 export function getApiBaseUrl() {
   return `http://${inferHost()}:4000/v1`
+}
+
+export function getWsBaseUrl() {
+  return `ws://${inferHost()}:4000`
 }
 
 export class ApiError extends Error {
@@ -188,6 +214,10 @@ export const api = {
   getActiveAuctions: () => request<BackendAuction[]>('/auctions/active'),
   getUpcomingAuctions: () => request<BackendAuction[]>('/auctions/upcoming'),
   listAuctions: () => request<{ items: BackendAuction[]; page: number; limit: number; total: number }>('/auctions'),
+
+  getAuctionById: (id: number) => request<BackendAuction>(`/auctions/${id}`),
+  getAuctionCatalog: (id: number) => request<BackendAuctionItem[]>(`/auctions/${id}/catalog`),
+  getBidsForAuction: (id: number) => request<BackendBidRow[]>(`/bids/auction/${id}`),
 
   getMe: (token: string) => request<BackendMe>('/users/me', undefined, token),
   getMyMetrics: (token: string) => request<BackendMetrics>('/users/me/metrics', undefined, token),

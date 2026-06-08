@@ -5,7 +5,7 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { AppProvider } from "./src/context/AppContext";
+import { AppProvider, type UiAuction } from "./src/context/AppContext";
 import BottomNav, { NavItem } from "./src/components/BottomNav";
 
 import SplashScreen from "./src/screens/SplashScreen";
@@ -16,6 +16,7 @@ import CatalogScreen from "./src/screens/CatalogScreen";
 import NotificationsScreen from "./src/screens/NotificationsScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import PaymentsScreen from "./src/screens/PaymentsScreen";
+import LiveAuctionScreen from "./src/screens/LiveAuctionScreen";
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -23,6 +24,7 @@ export type RootStackParamList = {
   Register: undefined;
   Main: undefined;
   Payments: undefined;
+  LiveAuction: { auction: UiAuction };
 };
 
 export type MainTabParamList = {
@@ -90,6 +92,7 @@ export default function App() {
               <Stack.Screen name="Register" component={RegisterScreen} />
               <Stack.Screen name="Main" component={MainTabs} />
               <Stack.Screen name="Payments" component={PaymentsScreen} />
+              <Stack.Screen name="LiveAuction" component={LiveAuctionScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </AppProvider>

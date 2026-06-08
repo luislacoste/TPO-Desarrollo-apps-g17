@@ -178,7 +178,10 @@ export default function CatalogScreen({ navigation }: Props) {
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
         renderItem={({ item }) => (
-          <AuctionCard auction={item} onPress={() => {}} />
+          <AuctionCard
+            auction={item}
+            onPress={() => navigation.navigate('LiveAuction', { auction: item })}
+          />
         )}
         ListEmptyComponent={
           <TouchableOpacity
