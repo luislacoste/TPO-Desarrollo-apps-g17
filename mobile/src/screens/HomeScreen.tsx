@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,10 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
-  ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+import BottomNav, { NavItem } from "../components/BottomNav";
 import { useAppData } from "../context/AppContext";
 
 function formatRelativeDate(dateString: string): string {
@@ -55,10 +56,26 @@ export default function HomeScreen({ navigation }: Props) {
     refreshPublicData,
   } = useAppData();
   const unreadCount = notifications.filter((n) => !n.read).length;
-  const displayName =
-    `${me?.firstName ?? ""} ${me?.lastName ?? ""}`.trim() ||
-    me?.email ||
-    "Usuario";
+  const displayName = `${me?.firstName ?? ""} ${me?.lastName ?? ""}`.trim() || me?.email?.split('@')[0] || 'Bienvenido'
+
+  const [refreshing, setRefreshing] = useState(false)
+  const onRefresh = async () => {
+    setRefreshing(true)
+    await refreshPublicData()
+    setRefreshing(false)
+  }
+
+  const handleNavigate = (item: NavItem) => {
+    navigation.navigate(
+      item === "home"
+        ? "Home"
+        : item === "catalog"
+          ? "Catalog"
+          : item === "notifications"
+            ? "Notifications"
+            : "Profile",
+    );
+  };
 
   return (
     <SafeAreaView style={styles.root}>
@@ -72,7 +89,7 @@ export default function HomeScreen({ navigation }: Props) {
           style={styles.bellWrap}
           onPress={() => navigation.navigate("Notifications")}
         >
-          <Feather name="bell" size={20} color="#0A0A0A" />
+          <Feather name="bell" size={20} color="#0a3d54" />
           {unreadCount > 0 && (
             <View style={styles.bellBadge}>
               <Text style={styles.bellBadgeText}>
@@ -94,9 +111,24 @@ export default function HomeScreen({ navigation }: Props) {
       </View>
 
       {/* Scrollable content */}
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#146C94" colors={["#146C94"]} />}>
+        {/* Como participar */}
+        <View style={styles.howSection}>
+          <Text style={styles.howTitle}>¿Cómo participar?</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.howCards}
+          >
+            <HowCard step="1" icon="user-check" title="Regístrate" desc="Creá tu cuenta con tus datos personales." />
+            <HowCard step="2" icon="file-text" title="Verificá tu identidad" desc="Subí tu documento de identidad." />
+            <HowCard step="3" icon="credit-card" title="Añadí un pago" desc="Vinculá un medio de pago seguro." />
+            <HowCard step="4" icon="zap" title="¡Participá!" desc="Realizá pujas en tiempo real." />
+          </ScrollView>
+        </View>
+
         {/* Categorias row */}
-        <TouchableOpacity style={styles.row}>
+        <TouchableOpacity style={styles.row} onPress={() => navigation.navigate('Catalog')}>
           <Text style={styles.rowTitle}>Categorias</Text>
           <View style={styles.rowRight}>
             <Text style={styles.rowCount}>5</Text>
@@ -108,7 +140,7 @@ export default function HomeScreen({ navigation }: Props) {
         {activeAuctions.length > 0 && (
           <TouchableOpacity
             style={styles.row}
-            onPress={() => navigation.navigate("Catalog")}
+            onPress={() => navigation.navigate("AuctionLive", { auctionId: activeAuctions[0].id })}
           >
             <View style={styles.rowLeft}>
               <MaterialCommunityIcons name="fire" size={20} color="#FB2C36" />
@@ -125,13 +157,6 @@ export default function HomeScreen({ navigation }: Props) {
           </TouchableOpacity>
         )}
 
-        {loading && upcomingAuctions.length === 0 && !error && (
-          <View style={styles.loadingRow}>
-            <ActivityIndicator size="small" color="#3E73EE" />
-            <Text style={styles.loadingText}>Cargando subastas...</Text>
-          </View>
-        )}
-
         {error ? (
           <TouchableOpacity
             style={styles.errorBanner}
@@ -139,7 +164,7 @@ export default function HomeScreen({ navigation }: Props) {
             activeOpacity={0.8}
           >
             <Text style={styles.errorBannerText}>
-              {error}. Tocá para reintentar.
+              {error}. Toca para reintentar.
             </Text>
           </TouchableOpacity>
         ) : null}
@@ -164,7 +189,7 @@ export default function HomeScreen({ navigation }: Props) {
             <TouchableOpacity
               key={auction.id}
               style={styles.auctionItem}
-              onPress={() => navigation.navigate("LiveAuction", { auction })}
+              onPress={() => navigation.navigate("AuctionLive", { auctionId: auction.id })}
               activeOpacity={0.8}
             >
               {/* Icon box */}
@@ -216,9 +241,51 @@ export default function HomeScreen({ navigation }: Props) {
         <View style={{ height: 16 }} />
       </ScrollView>
 
+      {/* Bottom nav */}
+      <BottomNav
+        active="home"
+        onNavigate={handleNavigate}
+        notificationCount={unreadCount}
+      />
     </SafeAreaView>
   );
 }
+
+function HowCard({ step, icon, title, desc }: { step: string; icon: string; title: string; desc: string }) {
+  return (
+    <View style={hw.card}>
+      <View style={hw.stepBadge}>
+        <Text style={hw.stepText}>{step}</Text>
+      </View>
+      <Feather name={icon as any} size={22} color="#0a3d54" style={hw.icon} />
+      <Text style={hw.title}>{title}</Text>
+      <Text style={hw.desc}>{desc}</Text>
+    </View>
+  )
+}
+
+const hw = StyleSheet.create({
+  card: {
+    width: 130,
+    backgroundColor: "#AFD3E2",
+    borderRadius: 16,
+    padding: 14,
+    gap: 6,
+  },
+  stepBadge: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: "#0a3d54",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  stepText: { fontSize: 11, fontWeight: "700", color: "#FFFFFF" },
+  icon: { marginBottom: 2 },
+  title: { fontSize: 13, fontWeight: "700", color: "#0a3d54" },
+  desc: { fontSize: 11, color: "#146C94", lineHeight: 15 },
+})
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: "#FFFFFF" },
@@ -229,11 +296,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 12,
+    backgroundColor: "#AFD3E2",
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
+    borderBottomColor: "rgba(10,61,84,0.15)",
   },
-  greeting: { fontSize: 13, color: "#737373" },
-  userName: { fontSize: 20, fontWeight: "700", color: "#0A0A0A" },
+  greeting: { fontSize: 13, color: "#146C94" },
+  userName: { fontSize: 20, fontWeight: "700", color: "#0a3d54" },
   bellWrap: {
     width: 36,
     height: 36,
@@ -341,6 +409,9 @@ const styles = StyleSheet.create({
     color: "#0A0A0A",
     paddingTop: 2,
   },
+  howSection: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 4, gap: 10 },
+  howTitle: { fontSize: 15, fontWeight: "700", color: "#0A0A0A" },
+  howCards: { flexDirection: "row", gap: 10, paddingBottom: 4 },
   errorBanner: {
     marginHorizontal: 16,
     marginBottom: 16,
@@ -360,12 +431,4 @@ const styles = StyleSheet.create({
   },
   emptyTitle: { fontSize: 14, fontWeight: "600", color: "#0A0A0A" },
   emptyText: { fontSize: 12, color: "#737373", marginTop: 4 },
-  loadingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 24,
-  },
-  loadingText: { fontSize: 13, color: "#737373" },
 });

@@ -8,12 +8,11 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native'
-import * as ImagePicker from 'expo-image-picker'
 import { Feather } from '@expo/vector-icons'
-import { api } from '../lib/api'
+import * as ImagePicker from 'expo-image-picker'
 
 interface Props {
   navigation: any
@@ -29,19 +28,8 @@ const STEPS = [
   { id: 5, title: 'Medio de Pago', icon: 'credit-card' },
 ]
 
-interface DocFile {
-  uri: string
-  name: string
-  type: string
-}
-
 export default function RegisterScreen({ navigation }: Props) {
   const [currentStep, setCurrentStep] = useState<Step>(1)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [userId, setUserId] = useState<number | null>(null)
-  const [docFront, setDocFront] = useState<DocFile | null>(null)
-  const [docBack, setDocBack] = useState<DocFile | null>(null)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -49,131 +37,88 @@ export default function RegisterScreen({ navigation }: Props) {
     email: '',
     address: '',
     country: '',
+    documentFront: null as string | null,
+    documentBack: null as string | null,
     password: '',
     confirmPassword: '',
   })
 
-  const update = (key: keyof typeof formData, value: string) =>
+  const update = (key: keyof typeof formData, value: string | null) =>
     setFormData(prev => ({ ...prev, [key]: value }))
 
-  const pickDocument = async (side: 'front' | 'back') => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync()
-    if (status !== 'granted') {
-      Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería para subir el documento.')
-      return
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: 'images' as any,
-      quality: 0.8,
-    })
-    if (!result.canceled && result.assets[0]) {
-      const asset = result.assets[0]
-      const ext = asset.uri.split('.').pop() ?? 'jpg'
-      const file: DocFile = {
-        uri: asset.uri,
-        name: `${side}.${ext}`,
-        type: asset.mimeType ?? `image/${ext}`,
-      }
-      if (side === 'front') setDocFront(file)
-      else setDocBack(file)
-    }
-  }
-
-  const validateStep1 = (): string | null => {
-    const { firstName, lastName, dni, email, address, country } = formData
-    if (!firstName.trim()) return 'El nombre es obligatorio'
-    if (!lastName.trim()) return 'El apellido es obligatorio'
-    if (!dni.trim()) return 'El DNI es obligatorio'
-    if (!email.trim() || !email.includes('@')) return 'Ingresá un email válido'
-    if (!address.trim()) return 'El domicilio es obligatorio'
-    if (!country.trim()) return 'El país es obligatorio'
-    return null
-  }
-
-  const validateStep4 = (): string | null => {
-    const { password, confirmPassword } = formData
-    if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres'
-    if (!/[A-Z]/.test(password)) return 'La contraseña debe tener al menos una mayúscula'
-    if (!/[0-9]/.test(password)) return 'La contraseña debe tener al menos un número'
-    if (password !== confirmPassword) return 'Las contraseñas no coinciden'
-    return null
-  }
-
-  const handleNext = async () => {
-    if (loading) return
-    setError(null)
-
+  const validateStep = (): boolean => {
     if (currentStep === 1) {
-      const validErr = validateStep1()
-      if (validErr) { setError(validErr); return }
-      setLoading(true)
-      try {
-        const { userId: id } = await api.registerStart({
-          email: formData.email.trim(),
-          firstName: formData.firstName.trim(),
-          lastName: formData.lastName.trim(),
-          domicilio: formData.address.trim(),
-          pais: formData.country.trim(),
-          documento: formData.dni.trim(),
-        })
-        setUserId(id)
-        setCurrentStep(2)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al crear la cuenta')
-      } finally {
-        setLoading(false)
+      const { firstName, lastName, dni, email, address, country } = formData
+      if (!firstName.trim() || !lastName.trim() || !dni.trim() || !email.trim() || !address.trim() || !country.trim()) {
+        Alert.alert('Campos incompletos', 'Por favor completa todos los campos para continuar.')
+        return false
       }
-      return
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      if (!emailOk) {
+        Alert.alert('Email inválido', 'Ingresa una dirección de email válida.')
+        return false
+      }
     }
-
     if (currentStep === 2) {
-      if (!docFront) { setError('Subí la foto del frente del documento'); return }
-      if (!docBack) { setError('Subí la foto del dorso del documento'); return }
-      if (userId == null) { setError('Error inesperado. Volvé al paso 1.'); return }
-      setLoading(true)
-      try {
-        await api.registerDocument(userId, docFront, docBack)
-        setCurrentStep(3)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al subir documentos')
-      } finally {
-        setLoading(false)
+      if (!formData.documentFront || !formData.documentBack) {
+        Alert.alert('Documentos requeridos', 'Por favor sube ambas fotos de tu documento para continuar.')
+        return false
       }
-      return
     }
-
-    if (currentStep === 3) {
-      setCurrentStep(4)
-      return
-    }
-
     if (currentStep === 4) {
-      const validErr = validateStep4()
-      if (validErr) { setError(validErr); return }
-      if (userId == null) { setError('Error inesperado. Volvé al paso 1.'); return }
-      setLoading(true)
-      try {
-        await api.registerComplete(userId, formData.password)
-        setCurrentStep(5)
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Error al completar el registro')
-      } finally {
-        setLoading(false)
+      const { password, confirmPassword } = formData
+      if (password.length < 8) {
+        Alert.alert('Contraseña inválida', 'La contraseña debe tener al menos 8 caracteres.')
+        return false
       }
-      return
+      if (!/[A-Z]/.test(password)) {
+        Alert.alert('Contraseña inválida', 'La contraseña debe tener al menos una letra mayúscula.')
+        return false
+      }
+      if (!/[0-9]/.test(password)) {
+        Alert.alert('Contraseña inválida', 'La contraseña debe tener al menos un número.')
+        return false
+      }
+      if (password !== confirmPassword) {
+        Alert.alert('Contraseñas no coinciden', 'Las contraseñas ingresadas no son iguales.')
+        return false
+      }
     }
+    return true
+  }
 
-    // Step 5 — done
-    Alert.alert(
-      'Registro completado',
-      'Tu cuenta está pendiente de aprobación. Te notificaremos cuando sea activada.',
-      [{ text: 'Entendido', onPress: () => navigation.replace('Login') }],
-    )
+  const handleNext = () => {
+    if (!validateStep()) return
+    if (currentStep < 5) {
+      setCurrentStep((currentStep + 1) as Step)
+    } else {
+      navigation.replace('Home')
+    }
   }
 
   const handleBack = () => {
-    if (currentStep > 1) setCurrentStep((currentStep - 1) as Step)
-    else navigation.goBack()
+    if (currentStep > 1) {
+      setCurrentStep((currentStep - 1) as Step)
+    } else {
+      navigation.goBack()
+    }
+  }
+
+  const pickImage = async (field: 'documentFront' | 'documentBack') => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync()
+    if (!permission.granted) {
+      Alert.alert('Permiso requerido', 'Necesitamos acceso a tu galería para subir fotos.')
+      return
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.8,
+    })
+    if (!result.canceled && result.assets[0]) {
+      update(field, result.assets[0].uri)
+    }
   }
 
   const renderStep = () => {
@@ -181,18 +126,50 @@ export default function RegisterScreen({ navigation }: Props) {
       case 1:
         return (
           <View style={styles.stepContent}>
-            <FieldInput icon="user" label="Nombre" placeholder="Tu nombre"
-              value={formData.firstName} onChangeText={v => update('firstName', v)} />
-            <FieldInput icon="user" label="Apellido" placeholder="Tu apellido"
-              value={formData.lastName} onChangeText={v => update('lastName', v)} />
-            <FieldInput icon="credit-card" label="DNI" placeholder="Tu DNI"
-              value={formData.dni} onChangeText={v => update('dni', v)} keyboardType="numeric" />
-            <FieldInput icon="mail" label="Email" placeholder="tu@email.com"
-              value={formData.email} onChangeText={v => update('email', v)} keyboardType="email-address" />
-            <FieldInput icon="map-pin" label="Domicilio" placeholder="Tu dirección"
-              value={formData.address} onChangeText={v => update('address', v)} />
-            <FieldInput icon="globe" label="País" placeholder="Tu país"
-              value={formData.country} onChangeText={v => update('country', v)} />
+            <FieldInput
+              icon="user"
+              label="Nombre"
+              placeholder="Tu nombre"
+              value={formData.firstName}
+              onChangeText={v => update('firstName', v)}
+            />
+            <FieldInput
+              icon="user"
+              label="Apellido"
+              placeholder="Tu apellido"
+              value={formData.lastName}
+              onChangeText={v => update('lastName', v)}
+            />
+            <FieldInput
+              icon="credit-card"
+              label="DNI"
+              placeholder="Tu DNI"
+              value={formData.dni}
+              onChangeText={v => update('dni', v)}
+              keyboardType="numeric"
+            />
+            <FieldInput
+              icon="mail"
+              label="Email"
+              placeholder="tu@email.com"
+              value={formData.email}
+              onChangeText={v => update('email', v)}
+              keyboardType="email-address"
+            />
+            <FieldInput
+              icon="map-pin"
+              label="Domicilio"
+              placeholder="Tu direccion"
+              value={formData.address}
+              onChangeText={v => update('address', v)}
+            />
+            <FieldInput
+              icon="globe"
+              label="Pais"
+              placeholder="Tu pais"
+              value={formData.country}
+              onChangeText={v => update('country', v)}
+            />
           </View>
         )
 
@@ -200,37 +177,49 @@ export default function RegisterScreen({ navigation }: Props) {
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepHelp}>
-              Subí fotos de tu documento de identidad para verificar tu cuenta
+              Sube fotos de tu documento de identidad para verificar tu cuenta
             </Text>
             <TouchableOpacity
-              style={[styles.docArea, docFront && styles.docAreaDone]}
-              onPress={() => pickDocument('front')}
+              style={[styles.docArea, !!formData.documentFront && styles.docAreaDone]}
+              onPress={() => pickImage('documentFront')}
               activeOpacity={0.8}
             >
-              <Feather
-                name={docFront ? 'check-circle' : 'file'}
-                size={36}
-                color={docFront ? '#16A34A' : '#737373'}
-              />
-              <Text style={[styles.docLabel, docFront && { color: '#16A34A' }]}>
-                {docFront ? 'Frente subido' : 'Subir frente del documento'}
-              </Text>
-              {!docFront && <Text style={styles.docHint}>Tocá para seleccionar una foto</Text>}
+              {formData.documentFront ? (
+                <>
+                  <Image source={{ uri: formData.documentFront }} style={styles.docPreview} />
+                  <View style={styles.docDoneOverlay}>
+                    <Feather name="check-circle" size={20} color="#16A34A" />
+                    <Text style={[styles.docLabel, { color: '#16A34A' }]}>Frente subido</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Feather name="upload" size={36} color="#737373" />
+                  <Text style={styles.docLabel}>Subir frente del documento</Text>
+                  <Text style={styles.docHint}>Tocá para abrir la galería</Text>
+                </>
+              )}
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.docArea, docBack && styles.docAreaDone]}
-              onPress={() => pickDocument('back')}
+              style={[styles.docArea, !!formData.documentBack && styles.docAreaDone]}
+              onPress={() => pickImage('documentBack')}
               activeOpacity={0.8}
             >
-              <Feather
-                name={docBack ? 'check-circle' : 'file'}
-                size={36}
-                color={docBack ? '#16A34A' : '#737373'}
-              />
-              <Text style={[styles.docLabel, docBack && { color: '#16A34A' }]}>
-                {docBack ? 'Dorso subido' : 'Subir dorso del documento'}
-              </Text>
-              {!docBack && <Text style={styles.docHint}>Tocá para seleccionar una foto</Text>}
+              {formData.documentBack ? (
+                <>
+                  <Image source={{ uri: formData.documentBack }} style={styles.docPreview} />
+                  <View style={styles.docDoneOverlay}>
+                    <Feather name="check-circle" size={20} color="#16A34A" />
+                    <Text style={[styles.docLabel, { color: '#16A34A' }]}>Dorso subido</Text>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Feather name="upload" size={36} color="#737373" />
+                  <Text style={styles.docLabel}>Subir dorso del documento</Text>
+                  <Text style={styles.docHint}>Tocá para abrir la galería</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         )
@@ -243,7 +232,7 @@ export default function RegisterScreen({ navigation }: Props) {
             </View>
             <Text style={styles.pendingTitle}>En revision</Text>
             <Text style={styles.pendingDesc}>
-              Tu documentacion esta siendo verificada. Podés continuar para configurar tu contraseña.
+              Tu documentacion esta siendo verificada. Te notificaremos cuando tu cuenta sea aprobada.
             </Text>
             <View style={styles.statusCard}>
               <View style={styles.statusRow}>
@@ -264,16 +253,28 @@ export default function RegisterScreen({ navigation }: Props) {
         const hasNumber = /[0-9]/.test(formData.password)
         return (
           <View style={styles.stepContent}>
-            <Text style={styles.stepHelp}>Crea una contraseña segura para tu cuenta</Text>
-            <FieldInput icon="lock" label="Contraseña" placeholder="Mínimo 8 caracteres"
-              value={formData.password} onChangeText={v => update('password', v)} secure />
-            <FieldInput icon="lock" label="Confirmar contraseña" placeholder="Repetí tu contraseña"
-              value={formData.confirmPassword} onChangeText={v => update('confirmPassword', v)} secure />
+            <Text style={styles.stepHelp}>Crea una contrasena segura para tu cuenta</Text>
+            <FieldInput
+              icon="lock"
+              label="Contrasena"
+              placeholder="Minimo 8 caracteres"
+              value={formData.password}
+              onChangeText={v => update('password', v)}
+              secure
+            />
+            <FieldInput
+              icon="lock"
+              label="Confirmar contrasena"
+              placeholder="Repite tu contrasena"
+              value={formData.confirmPassword}
+              onChangeText={v => update('confirmPassword', v)}
+              secure
+            />
             <View style={styles.requirements}>
-              <Text style={styles.reqTitle}>La contraseña debe tener:</Text>
-              <Requirement met={hasLength} text="Mínimo 8 caracteres" />
-              <Requirement met={hasUpper} text="Una letra mayúscula" />
-              <Requirement met={hasNumber} text="Un número" />
+              <Text style={styles.reqTitle}>La contrasena debe tener:</Text>
+              <Requirement met={hasLength} text="Minimo 8 caracteres" />
+              <Requirement met={hasUpper} text="Una letra mayuscula" />
+              <Requirement met={hasNumber} text="Un numero" />
             </View>
           </View>
         )
@@ -283,13 +284,13 @@ export default function RegisterScreen({ navigation }: Props) {
         return (
           <View style={styles.stepContent}>
             <Text style={styles.stepHelp}>
-              Registro casi listo. Podés agregar un medio de pago ahora o desde tu perfil.
+              Agrega un medio de pago para participar en subastas
             </Text>
-            <PayOption icon="credit-card" title="Tarjeta de Crédito" sub="Visa, Mastercard, Amex" color="#1D4ED8" bg="#DBEAFE" />
+            <PayOption icon="credit-card" title="Tarjeta de Credito" sub="Visa, Mastercard, Amex" color="#1D4ED8" bg="#DBEAFE" />
             <PayOption icon="home" title="Cuenta Bancaria" sub="Transferencia directa" color="#15803D" bg="#DCFCE7" />
             <PayOption icon="file-text" title="Cheque Certificado" sub="Para montos elevados" color="#B45309" bg="#FEF3C7" />
             <Text style={styles.payNote}>
-              Podés agregar más medios de pago desde tu perfil cuando lo necesites
+              Podras agregar mas medios de pago desde tu perfil
             </Text>
           </View>
         )
@@ -305,27 +306,29 @@ export default function RegisterScreen({ navigation }: Props) {
       <View style={styles.header}>
         <View style={styles.headerTop}>
           <TouchableOpacity onPress={handleBack} style={styles.backBtn}>
-            <Feather name="arrow-left" size={20} color="#0A0A0A" />
+            <Feather name="arrow-left" size={20} color="#0a3d54" />
           </TouchableOpacity>
           <View>
             <Text style={styles.headerTitle}>Crear Cuenta</Text>
             <Text style={styles.headerSub}>Paso {currentStep} de 5</Text>
           </View>
         </View>
+        {/* Progress bar */}
         <View style={styles.progressWrap}>
           {STEPS.map(step => (
             <View
               key={step.id}
               style={[
                 styles.progressSegment,
-                { backgroundColor: step.id <= currentStep ? '#3E73EE' : '#E5E5E5' },
+                { backgroundColor: step.id <= currentStep ? '#146C94' : 'rgba(10,61,84,0.2)' },
               ]}
             />
           ))}
         </View>
+        {/* Step title */}
         <View style={styles.stepTitleRow}>
           <View style={styles.stepIconWrap}>
-            <Feather name={STEPS[currentStep - 1].icon as any} size={20} color="#3E73EE" />
+            <Feather name={STEPS[currentStep - 1].icon as any} size={20} color="#146C94" />
           </View>
           <Text style={styles.stepTitle}>{STEPS[currentStep - 1].title}</Text>
         </View>
@@ -343,23 +346,11 @@ export default function RegisterScreen({ navigation }: Props) {
 
       {/* Footer */}
       <View style={styles.footer}>
-        {error ? <Text style={styles.errorText}>{error}</Text> : null}
-        <TouchableOpacity
-          style={[styles.continueBtn, loading && styles.continueBtnDisabled]}
-          onPress={handleNext}
-          activeOpacity={0.85}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#FFFFFF" />
-          ) : (
-            <>
-              <Text style={styles.continueBtnText}>
-                {currentStep === 5 ? 'Finalizar Registro' : 'Continuar'}
-              </Text>
-              <Feather name="arrow-right" size={18} color="#FFFFFF" />
-            </>
-          )}
+        <TouchableOpacity style={styles.continueBtn} onPress={handleNext} activeOpacity={0.85}>
+          <Text style={styles.continueBtnText}>
+            {currentStep === 5 ? 'Finalizar Registro' : 'Continuar'}
+          </Text>
+          <Feather name="arrow-right" size={18} color="#FFFFFF" />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -369,7 +360,13 @@ export default function RegisterScreen({ navigation }: Props) {
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
 function FieldInput({
-  icon, label, placeholder, value, onChangeText, keyboardType = 'default', secure = false,
+  icon,
+  label,
+  placeholder,
+  value,
+  onChangeText,
+  keyboardType = 'default',
+  secure = false,
 }: {
   icon: string
   label: string
@@ -408,8 +405,18 @@ function Requirement({ met, text }: { met: boolean; text: string }) {
   )
 }
 
-function PayOption({ icon, title, sub, color, bg }: {
-  icon: string; title: string; sub: string; color: string; bg: string
+function PayOption({
+  icon,
+  title,
+  sub,
+  color,
+  bg,
+}: {
+  icon: string
+  title: string
+  sub: string
+  color: string
+  bg: string
 }) {
   return (
     <TouchableOpacity style={po.wrap} activeOpacity={0.8}>
@@ -433,23 +440,27 @@ const styles = StyleSheet.create({
     paddingTop: 56,
     paddingHorizontal: 16,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#AFD3E2',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E5',
+    borderBottomColor: 'rgba(10,61,84,0.15)',
     gap: 12,
   },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   backBtn: { padding: 4, marginLeft: -4 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#0A0A0A' },
-  headerSub: { fontSize: 12, color: '#737373' },
+  headerTitle: { fontSize: 18, fontWeight: '700', color: '#0a3d54' },
+  headerSub: { fontSize: 12, color: '#146C94' },
   progressWrap: { flexDirection: 'row', gap: 4 },
   progressSegment: { flex: 1, height: 4, borderRadius: 2 },
   stepTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   stepIconWrap: {
-    width: 36, height: 36, borderRadius: 10, backgroundColor: '#EFF6FF',
-    alignItems: 'center', justifyContent: 'center',
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  stepTitle: { fontSize: 15, fontWeight: '600', color: '#0A0A0A' },
+  stepTitle: { fontSize: 15, fontWeight: '600', color: '#0a3d54' },
   scroll: { flex: 1 },
   scrollContent: { padding: 20 },
   stepContent: { gap: 16 },
@@ -465,20 +476,47 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     backgroundColor: '#FAFAFA',
+    overflow: 'hidden',
   },
   docAreaDone: { borderColor: '#16A34A', backgroundColor: '#F0FDF4' },
+  docPreview: { width: '100%', height: '100%', position: 'absolute' },
+  docDoneOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    paddingVertical: 6,
+  },
   docLabel: { fontSize: 14, fontWeight: '500', color: '#737373' },
   docHint: { fontSize: 11, color: '#A3A3A3' },
   pendingCircle: {
-    width: 90, height: 90, borderRadius: 45, backgroundColor: '#FEF9C3',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    backgroundColor: '#FEF9C3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
   pendingTitle: { fontSize: 20, fontWeight: '700', color: '#0A0A0A' },
   pendingDesc: {
-    fontSize: 13, color: '#737373', textAlign: 'center', maxWidth: 280, marginBottom: 16,
+    fontSize: 13,
+    color: '#737373',
+    textAlign: 'center',
+    maxWidth: 280,
+    marginBottom: 16,
   },
   statusCard: {
-    width: '100%', backgroundColor: '#F5F5F5', borderRadius: 12, padding: 14, gap: 8,
+    width: '100%',
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 14,
+    gap: 8,
   },
   statusRow: { flexDirection: 'row', justifyContent: 'space-between' },
   statusKey: { fontSize: 13, color: '#737373' },
@@ -491,19 +529,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E5E5E5',
     backgroundColor: '#FFFFFF',
-    gap: 8,
   },
-  errorText: { fontSize: 13, color: '#E7000B', textAlign: 'center' },
   continueBtn: {
     height: 52,
-    backgroundColor: '#3E73EE',
+    backgroundColor: '#146C94',
     borderRadius: 14,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  continueBtnDisabled: { opacity: 0.6 },
   continueBtnText: { fontSize: 16, fontWeight: '600', color: '#FFFFFF' },
 })
 
@@ -511,9 +546,14 @@ const fi = StyleSheet.create({
   wrap: { gap: 6 },
   label: { fontSize: 14, fontWeight: '500', color: '#0A0A0A' },
   inputWrap: {
-    flexDirection: 'row', alignItems: 'center', height: 48,
-    backgroundColor: '#F5F5F5', borderRadius: 12, borderWidth: 1,
-    borderColor: '#E5E5E5', paddingHorizontal: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 48,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    paddingHorizontal: 12,
   },
   icon: { marginRight: 8 },
   input: { flex: 1, fontSize: 14, color: '#0A0A0A' },
@@ -527,11 +567,21 @@ const req = StyleSheet.create({
 
 const po = StyleSheet.create({
   wrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14,
-    borderRadius: 14, borderWidth: 1, borderColor: '#E5E5E5', backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E5E5',
+    backgroundColor: '#FFFFFF',
   },
   iconBox: {
-    width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+    width: 46,
+    height: 46,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   text: { flex: 1 },
   title: { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },

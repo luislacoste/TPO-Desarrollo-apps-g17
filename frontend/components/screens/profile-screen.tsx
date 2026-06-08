@@ -9,7 +9,6 @@ import {
   CreditCard, 
   Package, 
   Heart, 
-  HelpCircle, 
   LogOut, 
   ChevronRight,
   Gavel,
@@ -22,35 +21,35 @@ interface ProfileScreenProps {
   activeNav: NavItem
   onNavigate: (item: NavItem) => void
   onViewPayments: () => void
+  onSettings: () => void
 }
 
-export function ProfileScreen({ activeNav, onNavigate, onViewPayments }: ProfileScreenProps) {
+export function ProfileScreen({ activeNav, onNavigate, onViewPayments, onSettings }: ProfileScreenProps) {
   const unreadNotifications = notifications.filter(n => !n.read).length
   
   const menuItems = [
     { icon: CreditCard, label: 'Medios de Pago', action: onViewPayments },
     { icon: Package, label: 'Mis Articulos', action: () => {} },
     { icon: Heart, label: 'Favoritos', action: () => {} },
-    { icon: Settings, label: 'Configuracion', action: () => {} },
-    { icon: HelpCircle, label: 'Ayuda y Soporte', action: () => {} },
+    { icon: Settings, label: 'Configuracion', action: onSettings },
   ]
   
   return (
     <MobileScreen safeAreaTop={false}>
       <div className="h-full flex flex-col bg-background">
         {/* Header */}
-        <div className="px-4 pt-14 pb-6 bg-gradient-to-b from-primary/10 to-transparent">
+        <div className="px-4 pt-14 pb-6" style={{ background: '#AFD3E2', borderBottom: '1px solid #8BBDD0' }}>
           <div className="flex items-start justify-between mb-6">
-            <h1 className="text-xl font-bold text-foreground">Mi Perfil</h1>
-            <button className="p-2 hover:bg-muted rounded-full transition-colors">
-              <Settings className="w-5 h-5 text-foreground" />
+            <h1 className="text-xl font-bold" style={{ color: '#0a3d54' }}>Mi Perfil</h1>
+            <button onClick={onSettings} className="p-2 hover:bg-white/30 rounded-full transition-colors">
+              <Settings className="w-5 h-5" style={{ color: '#0a3d54' }} />
             </button>
           </div>
           
           {/* Profile Card */}
-          <div className="bg-card rounded-2xl border border-border p-4 shadow-sm">
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.38)', border: '1px solid rgba(255,255,255,0.65)', boxShadow: '0 2px 12px rgba(10,61,84,0.10)' }}>
             <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center text-2xl font-bold text-primary-foreground">
+              <div className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold" style={{ background: '#0a3d54', color: '#FFFFFF' }}>
                 {currentUser.name.charAt(0)}
               </div>
               <div className="flex-1">
@@ -63,7 +62,7 @@ export function ProfileScreen({ activeNav, onNavigate, onViewPayments }: Profile
             </div>
             
             {/* Quick Stats */}
-            <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-border">
+            <div className="grid grid-cols-3 gap-3 mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.5)' }}>
               <div className="text-center">
                 <p className="font-mono text-lg font-bold text-foreground">
                   {currentUser.metrics.totalAuctions}
@@ -92,7 +91,7 @@ export function ProfileScreen({ activeNav, onNavigate, onViewPayments }: Profile
         {/* Content */}
         <div className="flex-1 overflow-auto px-4">
           {/* Detailed Metrics */}
-          <div className="mb-6">
+          <div className="mb-6 mt-6">
             <h3 className="font-semibold text-foreground mb-3">Tus Metricas</h3>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-card rounded-xl border border-border p-4">

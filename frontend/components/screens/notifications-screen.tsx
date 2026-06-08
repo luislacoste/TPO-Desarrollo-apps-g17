@@ -49,20 +49,20 @@ export function NotificationsScreen({ activeNav, onNavigate }: NotificationsScre
     <MobileScreen safeAreaTop={false}>
       <div className="h-full flex flex-col bg-background">
         {/* Header */}
-        <div className="px-4 pt-14 pb-4 bg-background border-b border-border">
+        <div className="px-4 pt-14 pb-4 border-b" style={{ background: '#AFD3E2', borderColor: '#8BBDD0' }}>
           <div className="flex items-center justify-between mb-2">
-            <h1 className="text-xl font-bold text-foreground">Notificaciones</h1>
+            <h1 className="text-xl font-bold" style={{ color: '#0a3d54' }}>Notificaciones</h1>
             <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-muted rounded-full transition-colors">
-                <CheckCheck className="w-5 h-5 text-muted-foreground" />
+              <button className="p-2 hover:bg-white/30 rounded-full transition-colors">
+                <CheckCheck className="w-5 h-5" style={{ color: '#146C94' }} />
               </button>
-              <button className="p-2 hover:bg-muted rounded-full transition-colors">
-                <Trash2 className="w-5 h-5 text-muted-foreground" />
+              <button className="p-2 hover:bg-white/30 rounded-full transition-colors">
+                <Trash2 className="w-5 h-5" style={{ color: '#146C94' }} />
               </button>
             </div>
           </div>
           {unreadNotifications > 0 && (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm" style={{ color: '#146C94' }}>
               {unreadNotifications} sin leer
             </p>
           )}

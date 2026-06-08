@@ -2,11 +2,9 @@ import React from "react";
 import { View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { StatusBar } from "expo-status-bar";
-import { AppProvider, type UiAuction } from "./src/context/AppContext";
-import BottomNav, { NavItem } from "./src/components/BottomNav";
+import { AppProvider } from "./src/context/AppContext";
 
 import SplashScreen from "./src/screens/SplashScreen";
 import LoginScreen from "./src/screens/LoginScreen";
@@ -16,65 +14,25 @@ import CatalogScreen from "./src/screens/CatalogScreen";
 import NotificationsScreen from "./src/screens/NotificationsScreen";
 import ProfileScreen from "./src/screens/ProfileScreen";
 import PaymentsScreen from "./src/screens/PaymentsScreen";
-import LiveAuctionScreen from "./src/screens/LiveAuctionScreen";
+import AuctionLiveScreen from "./src/screens/AuctionLiveScreen";
+import ItemDetailScreen from "./src/screens/ItemDetailScreen";
+import SettingsScreen from "./src/screens/SettingsScreen";
 
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Register: undefined;
-  Main: undefined;
-  Payments: undefined;
-  LiveAuction: { auction: UiAuction };
-};
-
-export type MainTabParamList = {
   Home: undefined;
   Catalog: undefined;
   Notifications: undefined;
   Profile: undefined;
+  Payments: undefined;
+  AuctionLive: { auctionId: string };
+  ItemDetail: { itemId: string };
+  Settings: undefined;
 };
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
-const Tab = createBottomTabNavigator<MainTabParamList>();
-
-const TAB_TO_NAV: Record<string, NavItem> = {
-  Home: "home",
-  Catalog: "catalog",
-  Notifications: "notifications",
-  Profile: "profile",
-};
-
-function MainTabs() {
-  return (
-    <Tab.Navigator
-      screenOptions={{ headerShown: false }}
-      tabBar={({ state, navigation }) => {
-        const current = state.routes[state.index].name;
-        return (
-          <BottomNav
-            active={TAB_TO_NAV[current] ?? "home"}
-            onNavigate={(item) => {
-              const screen =
-                item === "home"
-                  ? "Home"
-                  : item === "catalog"
-                    ? "Catalog"
-                    : item === "notifications"
-                      ? "Notifications"
-                      : "Profile";
-              navigation.navigate(screen);
-            }}
-          />
-        );
-      }}
-    >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Catalog" component={CatalogScreen} />
-      <Tab.Screen name="Notifications" component={NotificationsScreen} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
-    </Tab.Navigator>
-  );
-}
 
 export default function App() {
   return (
@@ -84,15 +42,26 @@ export default function App() {
           <NavigationContainer>
             <StatusBar style="auto" />
             <Stack.Navigator
-              screenOptions={{ headerShown: false, animation: "slide_from_right" }}
+              screenOptions={{
+                headerShown: false,
+                animation: "slide_from_right",
+              }}
               initialRouteName="Splash"
             >
               <Stack.Screen name="Splash" component={SplashScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Register" component={RegisterScreen} />
-              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen name="Home" component={HomeScreen} />
+              <Stack.Screen name="Catalog" component={CatalogScreen} />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+              />
+              <Stack.Screen name="Profile" component={ProfileScreen} />
               <Stack.Screen name="Payments" component={PaymentsScreen} />
-              <Stack.Screen name="LiveAuction" component={LiveAuctionScreen} />
+              <Stack.Screen name="AuctionLive" component={AuctionLiveScreen} />
+              <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
+              <Stack.Screen name="Settings" component={SettingsScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </AppProvider>

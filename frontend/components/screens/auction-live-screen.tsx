@@ -40,17 +40,18 @@ export function AuctionLiveScreen({ auctionId, onBack, onViewItem }: AuctionLive
         {/* Top bar */}
         <div style={{
           position: 'absolute', top: 0, left: 0, right: 0, height: 69,
-          background: '#FFFFFF', display: 'flex', alignItems: 'center',
+          background: '#AFD3E2', display: 'flex', alignItems: 'center',
           padding: '0 16px', gap: 12, zIndex: 10,
+          borderBottom: '1px solid #8BBDD0',
         }}>
           <button
             onClick={onBack}
             style={{ padding: '8px 8px 8px 0', display: 'flex', alignItems: 'center', cursor: 'pointer' }}
             aria-label="Volver"
           >
-            <ArrowLeft style={{ width: 20, height: 20, color: '#0A0A0A' }} />
+            <ArrowLeft style={{ width: 20, height: 20, color: '#0a3d54' }} />
           </button>
-          <span style={{ flex: 1, fontSize: 17, fontWeight: 600, color: '#0A0A0A', lineHeight: '24px' }}>
+          <span style={{ flex: 1, fontSize: 17, fontWeight: 600, color: '#0a3d54', lineHeight: '24px' }}>
             {auction.title}
           </span>
           <span style={{
@@ -176,10 +177,11 @@ export function AuctionLiveScreen({ auctionId, onBack, onViewItem }: AuctionLive
 
             {/* Como participar */}
             <div style={{
-              padding: 16, background: 'rgba(245,245,245,0.87)', borderRadius: 14,
+              padding: 16, background: '#AFD3E2', borderRadius: 14,
               display: 'flex', flexDirection: 'column', gap: 8,
+              border: '1px solid #8BBDD0',
             }}>
-              <span style={{ fontSize: 16, fontWeight: 500, color: '#0A0A0A' }}>Como participar</span>
+              <span style={{ fontSize: 16, fontWeight: 700, color: '#0a3d54', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Como participar</span>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 {[
                   'Selecciona el item por el que quieres pujar',
@@ -187,7 +189,7 @@ export function AuctionLiveScreen({ auctionId, onBack, onViewItem }: AuctionLive
                   'Confirma tu puja y espera el resultado',
                   'Puedes pujar por multiples items simultaneamente',
                 ].map((text, i) => (
-                  <span key={i} style={{ fontSize: 13, color: '#626060', lineHeight: '20px' }}>
+                  <span key={i} style={{ fontSize: 13, color: '#146C94', lineHeight: '20px' }}>
                     {i + 1}. {text}
                   </span>
                 ))}

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { MobileScreen } from "@/components/mobile-frame"
@@ -8,7 +8,7 @@ import { ArrowLeft, ArrowRight, User, Mail, MapPin, Globe, FileImage, CheckCircl
 import { cn } from "@/lib/utils"
 
 interface RegisterScreenProps {
-  onComplete: () => void
+  onComplete: (name: string) => void
   onBack: () => void
 }
 
@@ -36,30 +36,71 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
     password: '',
     confirmPassword: '',
   })
-  
+  const [documentFrontName, setDocumentFrontName] = useState<string | null>(null)
+  const [documentBackName, setDocumentBackName] = useState<string | null>(null)
+  const [stepError, setStepError] = useState<string | null>(null)
+  const frontInputRef = useRef<HTMLInputElement>(null)
+  const backInputRef = useRef<HTMLInputElement>(null)
+
+  const validateStep = (): string | null => {
+    switch (currentStep) {
+      case 1:
+        if (!formData.firstName.trim()) return 'El nombre es obligatorio'
+        if (!formData.lastName.trim()) return 'El apellido es obligatorio'
+        if (!formData.dni.trim()) return 'El DNI es obligatorio'
+        if (!/^\d{7,8}$/.test(formData.dni.trim())) return 'El DNI debe tener 7 u 8 numeros'
+        if (!formData.email.trim()) return 'El email es obligatorio'
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) return 'El email no es valido'
+        if (!formData.address.trim()) return 'El domicilio es obligatorio'
+        if (!formData.country.trim()) return 'El pais es obligatorio'
+        return null
+      case 2:
+        if (!formData.documentFront) return 'Debes subir el frente del documento'
+        if (!formData.documentBack) return 'Debes subir el dorso del documento'
+        return null
+      case 4:
+        if (formData.password.length < 8) return 'La contrasena debe tener al menos 8 caracteres'
+        if (!/[A-Z]/.test(formData.password)) return 'La contrasena debe tener al menos una mayuscula'
+        if (!/[0-9]/.test(formData.password)) return 'La contrasena debe tener al menos un numero'
+        if (formData.password !== formData.confirmPassword) return 'Las contrasenas no coinciden'
+        return null
+      default:
+        return null
+    }
+  }
+
   const handleNext = () => {
+    const error = validateStep()
+    if (error) {
+      setStepError(error)
+      return
+    }
+    setStepError(null)
     if (currentStep < 5) {
       setCurrentStep((currentStep + 1) as Step)
     } else {
-      onComplete()
+      onComplete(formData.firstName || 'Usuario')
     }
   }
-  
+
   const handlePrev = () => {
+    setStepError(null)
     if (currentStep > 1) {
       setCurrentStep((currentStep - 1) as Step)
     } else {
       onBack()
     }
   }
-  
+
   const renderStep = () => {
     switch (currentStep) {
       case 1:
         return (
           <div className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Nombre</label>
+              <label className="text-sm font-medium text-foreground">
+                Nombre <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -70,9 +111,11 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Apellido</label>
+              <label className="text-sm font-medium text-foreground">
+                Apellido <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -83,13 +126,15 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Documento Nacional de Identidad (DNI)</label>
+              <label className="text-sm font-medium text-foreground">
+                Documento Nacional de Identidad (DNI) <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
-                  placeholder="Tu DNI"
+                  placeholder="Tu DNI (7 u 8 digitos)"
                   value={formData.dni}
                   onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
                   className="pl-11 h-12"
@@ -99,7 +144,9 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Email</label>
+              <label className="text-sm font-medium text-foreground">
+                Email <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -111,9 +158,11 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Domicilio</label>
+              <label className="text-sm font-medium text-foreground">
+                Domicilio <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -124,9 +173,11 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Pais</label>
+              <label className="text-sm font-medium text-foreground">
+                Pais <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -139,20 +190,50 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
             </div>
           </div>
         )
-      
+
       case 2:
         return (
           <div className="space-y-6">
             <p className="text-sm text-muted-foreground text-center">
               Sube fotos de tu documento de identidad para verificar tu cuenta
             </p>
-            
+
+            <input
+              ref={frontInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  setFormData({ ...formData, documentFront: true })
+                  setDocumentFrontName(file.name)
+                  setStepError(null)
+                }
+              }}
+            />
+            <input
+              ref={backInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  setFormData({ ...formData, documentBack: true })
+                  setDocumentBackName(file.name)
+                  setStepError(null)
+                }
+              }}
+            />
+
             <div className="space-y-4">
               <button
-                onClick={() => setFormData({ ...formData, documentFront: true })}
+                type="button"
+                onClick={() => frontInputRef.current?.click()}
                 className={cn(
                   "w-full h-40 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-colors",
-                  formData.documentFront 
+                  formData.documentFront
                     ? "border-green-500 bg-green-50 text-green-600"
                     : "border-border hover:border-primary hover:bg-primary/5 text-muted-foreground"
                 )}
@@ -161,6 +242,9 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
                   <>
                     <CheckCircle className="w-10 h-10" />
                     <span className="font-medium">Frente subido</span>
+                    {documentFrontName && (
+                      <span className="text-xs truncate max-w-[220px] px-2">{documentFrontName}</span>
+                    )}
                   </>
                 ) : (
                   <>
@@ -170,12 +254,13 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
                   </>
                 )}
               </button>
-              
+
               <button
-                onClick={() => setFormData({ ...formData, documentBack: true })}
+                type="button"
+                onClick={() => backInputRef.current?.click()}
                 className={cn(
                   "w-full h-40 rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-3 transition-colors",
-                  formData.documentBack 
+                  formData.documentBack
                     ? "border-green-500 bg-green-50 text-green-600"
                     : "border-border hover:border-primary hover:bg-primary/5 text-muted-foreground"
                 )}
@@ -184,6 +269,9 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
                   <>
                     <CheckCircle className="w-10 h-10" />
                     <span className="font-medium">Dorso subido</span>
+                    {documentBackName && (
+                      <span className="text-xs truncate max-w-[220px] px-2">{documentBackName}</span>
+                    )}
                   </>
                 ) : (
                   <>
@@ -196,7 +284,7 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
             </div>
           </div>
         )
-      
+
       case 3:
         return (
           <div className="flex flex-col items-center justify-center py-8 text-center">
@@ -219,16 +307,18 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
             </div>
           </div>
         )
-      
+
       case 4:
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground text-center mb-4">
               Crea una contrasena segura para tu cuenta
             </p>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Contrasena</label>
+              <label className="text-sm font-medium text-foreground">
+                Contrasena <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -240,9 +330,11 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Confirmar contrasena</label>
+              <label className="text-sm font-medium text-foreground">
+                Confirmar contrasena <span className="text-red-500">*</span>
+              </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
@@ -254,7 +346,7 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2 pt-4">
               <p className="text-xs text-muted-foreground">La contrasena debe tener:</p>
               <ul className="text-xs space-y-1">
@@ -270,18 +362,28 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
                   <span className={cn("w-1.5 h-1.5 rounded-full", /[0-9]/.test(formData.password) ? "bg-green-500" : "bg-muted-foreground")} />
                   Un numero
                 </li>
+                <li className={cn(
+                  "flex items-center gap-2",
+                  formData.confirmPassword.length > 0 && formData.password === formData.confirmPassword && "text-green-600"
+                )}>
+                  <span className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    formData.confirmPassword.length > 0 && formData.password === formData.confirmPassword ? "bg-green-500" : "bg-muted-foreground"
+                  )} />
+                  Las contrasenas coinciden
+                </li>
               </ul>
             </div>
           </div>
         )
-      
+
       case 5:
         return (
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground text-center mb-4">
               Agrega un medio de pago para participar en subastas
             </p>
-            
+
             <button className="w-full p-4 rounded-xl border border-border hover:border-primary transition-colors flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center">
                 <CreditCard className="w-6 h-6 text-blue-600" />
@@ -292,7 +394,7 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
               </div>
               <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
             </button>
-            
+
             <button className="w-full p-4 rounded-xl border border-border hover:border-primary transition-colors flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-emerald-100 flex items-center justify-center">
                 <svg className="w-6 h-6 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -305,7 +407,7 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
               </div>
               <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
             </button>
-            
+
             <button className="w-full p-4 rounded-xl border border-border hover:border-primary transition-colors flex items-center gap-4">
               <div className="w-12 h-12 rounded-lg bg-amber-100 flex items-center justify-center">
                 <FileImage className="w-6 h-6 text-amber-600" />
@@ -316,7 +418,7 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
               </div>
               <ArrowRight className="w-5 h-5 ml-auto text-muted-foreground" />
             </button>
-            
+
             <p className="text-xs text-center text-muted-foreground pt-4">
               Podras agregar mas medios de pago desde tu perfil
             </p>
@@ -324,38 +426,38 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
         )
     }
   }
-  
+
   return (
     <MobileScreen safeAreaTop={false} safeAreaBottom={false}>
       <div className="h-full flex flex-col">
         {/* Header */}
-        <div className="px-4 pt-14 pb-4 bg-background border-b border-border">
+        <div className="px-4 pt-14 pb-4 border-b border-border" style={{ background: '#AFD3E2' }}>
           <div className="flex items-center gap-3 mb-4">
-            <button 
+            <button
               onClick={handlePrev}
-              className="p-2 -ml-2 hover:bg-muted rounded-lg transition-colors"
+              className="p-2 -ml-2 hover:bg-white/30 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-foreground" />
+              <ArrowLeft className="w-5 h-5" style={{ color: '#0a3d54' }} />
             </button>
             <div>
-              <h1 className="font-bold text-lg text-foreground">Crear Cuenta</h1>
-              <p className="text-xs text-muted-foreground">Paso {currentStep} de 5</p>
+              <h1 className="font-bold text-lg" style={{ color: '#0a3d54' }}>Crear Cuenta</h1>
+              <p className="text-xs" style={{ color: '#146C94' }}>Paso {currentStep} de 5</p>
             </div>
           </div>
-          
+
           {/* Progress Steps */}
           <div className="flex items-center gap-2">
             {steps.map((step) => (
               <div key={step.id} className="flex-1 flex flex-col items-center gap-1">
                 <div className={cn(
                   "w-full h-1 rounded-full transition-colors",
-                  step.id <= currentStep ? "bg-primary" : "bg-muted"
+                  step.id <= currentStep ? "bg-[#0a3d54]" : "bg-white/40"
                 )} />
               </div>
             ))}
           </div>
         </div>
-        
+
         {/* Step Content */}
         <div className="flex-1 overflow-auto px-6 py-6">
           <div className="flex items-center gap-3 mb-6">
@@ -371,12 +473,15 @@ export function RegisterScreen({ onComplete, onBack }: RegisterScreenProps) {
               <h2 className="font-semibold text-foreground">{steps[currentStep - 1].title}</h2>
             </div>
           </div>
-          
+
           {renderStep()}
         </div>
-        
+
         {/* Footer */}
         <div className="p-6 border-t border-border bg-background">
+          {stepError && (
+            <p className="text-sm text-red-500 text-center mb-3 font-medium">{stepError}</p>
+          )}
           <Button
             onClick={handleNext}
             className="w-full h-12 text-base font-semibold gap-2"

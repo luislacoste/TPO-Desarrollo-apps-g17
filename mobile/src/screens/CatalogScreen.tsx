@@ -10,6 +10,7 @@ import {
   ScrollView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
+import BottomNav, { NavItem } from "../components/BottomNav";
 import AuctionCard from "../components/AuctionCard";
 import CategoryBadge from "../components/CategoryBadge";
 import { UiCategory, useAppData } from "../context/AppContext";
@@ -30,13 +31,16 @@ interface Props {
 }
 
 export default function CatalogScreen({ navigation }: Props) {
-  const { allAuctions, loading, error, refreshPublicData } = useAppData();
+  const { allAuctions, notifications, loading, error, refreshPublicData } =
+    useAppData();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<UiCategory | null>(
     null,
   );
   const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("all");
   const [showFilters, setShowFilters] = useState(false);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const filtered = allAuctions.filter((a) => {
     const matchesSearch =
@@ -48,6 +52,18 @@ export default function CatalogScreen({ navigation }: Props) {
       selectedStatus === "all" || a.status === selectedStatus;
     return matchesSearch && matchesCategory && matchesStatus;
   });
+
+  const handleNavigate = (item: NavItem) => {
+    navigation.navigate(
+      item === "home"
+        ? "Home"
+        : item === "catalog"
+          ? "Catalog"
+          : item === "notifications"
+            ? "Notifications"
+            : "Profile",
+    );
+  };
 
   return (
     <SafeAreaView style={styles.root}>
@@ -62,7 +78,7 @@ export default function CatalogScreen({ navigation }: Props) {
             <Feather
               name="sliders"
               size={18}
-              color={showFilters ? "#FFFFFF" : "#0A0A0A"}
+              color={showFilters ? "#FFFFFF" : "#0a3d54"}
             />
           </TouchableOpacity>
         </View>
@@ -150,7 +166,7 @@ export default function CatalogScreen({ navigation }: Props) {
                   size="sm"
                   style={
                     selectedCategory === cat
-                      ? { borderWidth: 2, borderColor: "#3E73EE" }
+                      ? { borderWidth: 2, borderColor: "#146C94" }
                       : undefined
                   }
                 />
@@ -180,7 +196,7 @@ export default function CatalogScreen({ navigation }: Props) {
         renderItem={({ item }) => (
           <AuctionCard
             auction={item}
-            onPress={() => navigation.navigate('LiveAuction', { auction: item })}
+            onPress={() => navigation.navigate('AuctionLive', { auctionId: item.id })}
           />
         )}
         ListEmptyComponent={
@@ -202,6 +218,11 @@ export default function CatalogScreen({ navigation }: Props) {
         }
       />
 
+      <BottomNav
+        active="catalog"
+        onNavigate={handleNavigate}
+        notificationCount={unreadCount}
+      />
     </SafeAreaView>
   );
 }
@@ -212,9 +233,9 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingHorizontal: 16,
     paddingBottom: 8,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#AFD3E2",
     borderBottomWidth: 1,
-    borderBottomColor: "#E5E5E5",
+    borderBottomColor: "rgba(10,61,84,0.15)",
     gap: 12,
   },
   headerTop: {
@@ -222,7 +243,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
   },
-  title: { fontSize: 20, fontWeight: "700", color: "#0A0A0A" },
+  title: { fontSize: 20, fontWeight: "700", color: "#0a3d54" },
   filterBtn: {
     width: 36,
     height: 36,
@@ -231,7 +252,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  filterBtnActive: { backgroundColor: "#3E73EE" },
+  filterBtnActive: { backgroundColor: "#146C94" },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -249,7 +270,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#F5F5F5",
   },
-  tabActive: { backgroundColor: "#3E73EE" },
+  tabActive: { backgroundColor: "#146C94" },
   tabText: { fontSize: 13, fontWeight: "500", color: "#737373" },
   tabTextActive: { color: "#FFFFFF", fontWeight: "600" },
   filterPanel: {
@@ -268,7 +289,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     backgroundColor: "#F5F5F5",
   },
-  allCatBtnActive: { backgroundColor: "#3E73EE" },
+  allCatBtnActive: { backgroundColor: "#146C94" },
   allCatText: { fontSize: 12, fontWeight: "500", color: "#737373" },
   countRow: { paddingHorizontal: 16, paddingVertical: 10 },
   countText: { fontSize: 13, color: "#737373" },

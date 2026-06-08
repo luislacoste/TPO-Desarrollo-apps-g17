@@ -10,6 +10,7 @@ interface HomeScreenProps {
   activeNav: NavItem
   onNavigate: (item: NavItem) => void
   onViewAuction: (auctionId: string) => void
+  userName?: string
 }
 
 const ICON_GRADIENTS = [
@@ -20,29 +21,29 @@ const ICON_GRADIENTS = [
   'linear-gradient(135deg, #06D6A0 0%, #118577 100%)',
 ]
 
-export function HomeScreen({ activeNav, onNavigate, onViewAuction }: HomeScreenProps) {
+export function HomeScreen({ activeNav, onNavigate, onViewAuction, userName }: HomeScreenProps) {
   const liveAuctions = auctions.filter(a => a.status === 'live')
   const upcomingAuctions = auctions.filter(a => a.status === 'upcoming').slice(0, 5)
   const unreadNotifications = notifications.filter(n => !n.read).length
-  const displayName = currentUser.name.split(' ').slice(0, 2).join(' ')
+  const displayName = userName ? userName : currentUser.name.split(' ').slice(0, 2).join(' ')
 
   return (
     <MobileScreen safeAreaTop={false}>
       <div className="h-full flex flex-col" style={{ background: '#FFFFFF' }}>
 
         {/* Header */}
-        <div style={{ padding: '24px 16px 16px', background: '#FFFFFF', borderBottom: '1px solid #E5E5E5', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ padding: '24px 16px 16px', background: '#AFD3E2', borderBottom: '1px solid #8BBDD0', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
-              <p style={{ fontSize: 14, lineHeight: '20px', color: '#737373', fontWeight: 400 }}>Hola,</p>
-              <h1 style={{ fontSize: 20, lineHeight: '28px', color: '#0A0A0A', fontWeight: 700 }}>{displayName}</h1>
+              <p style={{ fontSize: 14, lineHeight: '20px', color: '#146C94', fontWeight: 400 }}>Hola,</p>
+              <h1 style={{ fontSize: 20, lineHeight: '28px', color: '#0a3d54', fontWeight: 700 }}>{displayName}</h1>
             </div>
             <button
               onClick={() => onNavigate('notifications')}
               style={{ position: 'relative', width: 36, height: 36, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               aria-label={`Notificaciones (${unreadNotifications})`}
             >
-              <Bell style={{ width: 20, height: 20, color: '#0A0A0A' }} />
+              <Bell style={{ width: 20, height: 20, color: '#0a3d54' }} />
               {unreadNotifications > 0 && (
                 <span style={{
                   position: 'absolute', top: 0, right: 0,
@@ -77,6 +78,7 @@ export function HomeScreen({ activeNav, onNavigate, onViewAuction }: HomeScreenP
 
           {/* Categorias row */}
           <button
+            onClick={() => onNavigate('catalog')}
             style={{
               width: '100%', padding: '12px 16px',
               borderBottom: '1px solid #E5E5E5', background: '#FFFFFF',

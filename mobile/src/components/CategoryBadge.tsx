@@ -32,7 +32,7 @@ const categoryStyles: Record<UiCategory, CategoryStyle> = {
   especial: {
     label: "Especial",
     bg: "#EFF6FF",
-    text: "#3E73EE",
+    text: "#146C94",
     border: "#BFDBFE",
     iconSet: "feather",
     iconName: "star",
