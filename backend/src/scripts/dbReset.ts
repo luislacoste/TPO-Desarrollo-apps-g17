@@ -14,9 +14,9 @@ import path from 'path';
 import { pool } from '../db';
 
 const FILES = [
-  '../../db/schema.sql',
-  '../../db/schema_complemento.sql',
-  '../../db/seed.sql',
+  '../../../db/schema.sql',
+  '../../../db/schema_complemento.sql',
+  '../../../db/seed.sql',
 ];
 
 async function runFile(rel: string) {
