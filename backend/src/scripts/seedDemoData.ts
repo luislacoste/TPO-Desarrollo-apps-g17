@@ -29,17 +29,23 @@ const IDS = {
 
   subastaUpcomingId: 5002,
   subastaClosedId: 5003,
+  subastaRacingBocaId: 5004,
 
   catalogoUpcomingId: 6002,
   catalogoClosedId: 6003,
+  catalogoRacingBocaId: 6004,
 
   productoUpcoming1: 1002,
   productoUpcoming2: 1003,
   productoClosed1: 1001,
+  productoRacing: 1004,
+  productoBoca: 1005,
 
   itemUpcoming1: 7002,
   itemUpcoming2: 7003,
   itemClosed1: 7001,
+  itemRacing: 7004,
+  itemBoca: 7005,
 
   asistAdminClosed: 8001,
   asistBidderClosed: 8002,
@@ -204,7 +210,9 @@ async function main() {
        VALUES
          ($1, CURRENT_DATE - INTERVAL '14 days', 'si', 'Reloj Omega Seamaster 1972', 'https://demo.subastar.local/docs/omega-seamaster', $4, $5, 'POL-DEMO-1001'),
          ($2, CURRENT_DATE - INTERVAL '9 days', 'si', 'Coleccion de monedas virreinales', 'https://demo.subastar.local/docs/monedas-virreinales', $4, $5, 'POL-DEMO-1002'),
-         ($3, CURRENT_DATE - INTERVAL '3 days', 'si', 'Escultura en bronce siglo XX', 'https://demo.subastar.local/docs/escultura-bronce', $4, $5, 'POL-DEMO-1003')
+         ($3, CURRENT_DATE - INTERVAL '3 days', 'si', 'Escultura en bronce siglo XX', 'https://demo.subastar.local/docs/escultura-bronce', $4, $5, 'POL-DEMO-1003'),
+         ($6, CURRENT_DATE - INTERVAL '1 day', 'si', 'Camiseta Racing Club Temporada 2024', 'https://demo.subastar.local/docs/camiseta-racing', $4, $5, 'POL-DEMO-1001'),
+         ($7, CURRENT_DATE - INTERVAL '1 day', 'si', 'Camiseta Boca Juniors Temporada 2024', 'https://demo.subastar.local/docs/camiseta-boca', $4, $5, 'POL-DEMO-1002')
        ON CONFLICT (identificador) DO UPDATE
          SET fecha = EXCLUDED.fecha,
              disponible = EXCLUDED.disponible,
@@ -219,14 +227,16 @@ async function main() {
         IDS.productoUpcoming2,
         IDS.verifierEmpleadoId,
         IDS.ownerId,
+        IDS.productoRacing,
+        IDS.productoBoca,
       ],
     );
 
     await client.query(`DELETE FROM pujos WHERE identificador IN ($1, $2)`, [IDS.pujoAdminClosed, IDS.pujoBidderClosed]);
     await client.query(`DELETE FROM asistentes WHERE identificador IN ($1, $2)`, [IDS.asistAdminClosed, IDS.asistBidderClosed]);
-    await client.query(`DELETE FROM itemscatalogo WHERE identificador IN ($1, $2, $3)`, [IDS.itemClosed1, IDS.itemUpcoming1, IDS.itemUpcoming2]);
-    await client.query(`DELETE FROM catalogos WHERE identificador IN ($1, $2)`, [IDS.catalogoClosedId, IDS.catalogoUpcomingId]);
-    await client.query(`DELETE FROM subastas WHERE identificador IN ($1, $2)`, [IDS.subastaClosedId, IDS.subastaUpcomingId]);
+    await client.query(`DELETE FROM itemscatalogo WHERE identificador IN ($1, $2, $3, $4, $5)`, [IDS.itemClosed1, IDS.itemUpcoming1, IDS.itemUpcoming2, IDS.itemRacing, IDS.itemBoca]);
+    await client.query(`DELETE FROM catalogos WHERE identificador IN ($1, $2, $3)`, [IDS.catalogoClosedId, IDS.catalogoUpcomingId, IDS.catalogoRacingBocaId]);
+    await client.query(`DELETE FROM subastas WHERE identificador IN ($1, $2, $3)`, [IDS.subastaClosedId, IDS.subastaUpcomingId, IDS.subastaRacingBocaId]);
 
     await client.query(
       `INSERT INTO subastas (
@@ -245,8 +255,9 @@ async function main() {
        OVERRIDING SYSTEM VALUE
        VALUES
          ($1, CURRENT_DATE + INTERVAL '12 days', '19:30', 'abierta', $3, 'Salon Palermo - Pabellon Azul', 120, 'si', 'si', 'oro', 'USD'),
-         ($2, CURRENT_DATE + INTERVAL '15 days', '18:00', 'cerrada', $3, 'Auditorio Centro - CABA', 90, 'si', 'no', 'plata', 'ARS')`,
-      [IDS.subastaUpcomingId, IDS.subastaClosedId, IDS.auctioneerId],
+         ($2, CURRENT_DATE + INTERVAL '15 days', '18:00', 'cerrada', $3, 'Auditorio Centro - CABA', 90, 'si', 'no', 'plata', 'ARS'),
+         ($4, CURRENT_DATE + INTERVAL '11 days', '20:00', 'abierta', $3, 'Subasta Futbol - CABA', 80, 'si', 'si', 'oro', 'ARS')`,
+      [IDS.subastaUpcomingId, IDS.subastaClosedId, IDS.auctioneerId, IDS.subastaRacingBocaId],
     );
 
     await client.query(
@@ -254,13 +265,16 @@ async function main() {
        OVERRIDING SYSTEM VALUE
        VALUES
          ($1, 'Catalogo Demo Upcoming', $3, $4),
-         ($2, 'Catalogo Demo Closed', $5, $4)`,
+         ($2, 'Catalogo Demo Closed', $5, $4),
+         ($6, 'Camisetas Futbol Argentino', $7, $4)`,
       [
         IDS.catalogoUpcomingId,
         IDS.catalogoClosedId,
         IDS.subastaUpcomingId,
         IDS.verifierEmpleadoId,
         IDS.subastaClosedId,
+        IDS.catalogoRacingBocaId,
+        IDS.subastaRacingBocaId,
       ],
     );
 
@@ -270,16 +284,23 @@ async function main() {
        VALUES
          ($1, $4, $7, 1800.00, 180.00, 'si'),
          ($2, $3, $5, 3500.00, 350.00, 'no'),
-         ($6, $3, $8, 1200.00, 120.00, 'no')`,
+         ($6, $3, $8, 1200.00, 120.00, 'no'),
+         ($9, $10, $11, 25000.00, 2500.00, 'no'),
+         ($12, $10, $13, 22000.00, 2200.00, 'no')`,
       [
-        IDS.itemClosed1,
-        IDS.itemUpcoming1,
-        IDS.catalogoUpcomingId,
-        IDS.catalogoClosedId,
-        IDS.productoUpcoming1,
-        IDS.itemUpcoming2,
-        IDS.productoClosed1,
-        IDS.productoUpcoming2,
+        IDS.itemClosed1,        // $1
+        IDS.itemUpcoming1,      // $2
+        IDS.catalogoUpcomingId, // $3
+        IDS.catalogoClosedId,   // $4
+        IDS.productoUpcoming1,  // $5
+        IDS.itemUpcoming2,      // $6
+        IDS.productoClosed1,    // $7
+        IDS.productoUpcoming2,  // $8
+        IDS.itemRacing,         // $9
+        IDS.catalogoRacingBocaId, // $10
+        IDS.productoRacing,     // $11
+        IDS.itemBoca,           // $12
+        IDS.productoBoca,       // $13
       ],
     );
 
