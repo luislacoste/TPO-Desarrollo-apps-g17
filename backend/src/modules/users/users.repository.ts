@@ -22,7 +22,7 @@ export interface MeRow {
   pais: string | null;
   numeropais: number | null;
   pais_nombre: string | null;
-  category: 'bronce' | 'plata' | 'oro' | 'platino' | null;
+  category: 'comun' | 'especial' | 'plata' | 'oro' | 'platino' | null;
   admision_estado: string | null;
   admision_notas: string | null;
   admision_updated_at: Date | null;

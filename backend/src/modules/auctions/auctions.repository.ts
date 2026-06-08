@@ -16,7 +16,7 @@ export interface SubastaRow {
   capacidad_asistentes: number | null;
   tiene_deposito: 'si' | 'no' | null;
   seguridad_propia: 'si' | 'no' | null;
-  categoria: 'bronce' | 'plata' | 'oro' | 'platino' | null;
+  categoria: 'comun' | 'especial' | 'plata' | 'oro' | 'platino' | null;
   moneda: 'ARS' | 'USD';
   subastador_id: number | null;
   subastador_nombre: string | null;
@@ -316,7 +316,7 @@ export interface CreateSubastaInput {
   estado?: 'abierta' | 'cerrada';
   subastador?: number;
   ubicacion?: string;
-  categoria?: 'bronce' | 'plata' | 'oro' | 'platino';
+  categoria?: 'comun' | 'especial' | 'plata' | 'oro' | 'platino';
   moneda?: 'ARS' | 'USD';
   capacidadasistentes?: number;
   tienedeposito?: 'si' | 'no';
@@ -344,4 +344,47 @@ export async function insertSubasta(data: CreateSubastaInput): Promise<number> {
     ],
   );
   return rows[0].id;
+}
+
+// ─── Catálogo e ítems ─────────────────────────────────────────────────
+
+export async function findCatalogoBySubasta(subastaId: number): Promise<number | null> {
+  const { rows } = await query<{ id: number }>(
+    `SELECT identificador AS id FROM catalogos WHERE subasta = $1 LIMIT 1`,
+    [subastaId],
+  );
+  return rows[0]?.id ?? null;
+}
+
+export async function insertCatalogo(subastaId: number, responsableId: number): Promise<number> {
+  const { rows } = await query<{ id: number }>(
+    `INSERT INTO catalogos (descripcion, subasta, responsable)
+     VALUES ('Catálogo de subasta', $1, $2)
+     RETURNING identificador AS id`,
+    [subastaId, responsableId],
+  );
+  return rows[0].id;
+}
+
+export interface NewItemInput {
+  productoId: number;
+  precioBase: number;
+  comision: number;
+}
+
+export async function insertItemsCatalogo(
+  catalogoId: number,
+  items: NewItemInput[],
+): Promise<number[]> {
+  const ids: number[] = [];
+  for (const item of items) {
+    const { rows } = await query<{ id: number }>(
+      `INSERT INTO itemscatalogo (catalogo, producto, preciobase, comision, subastado)
+       VALUES ($1, $2, $3, $4, 'no')
+       RETURNING identificador AS id`,
+      [catalogoId, item.productoId, item.precioBase, item.comision],
+    );
+    ids.push(rows[0].id);
+  }
+  return ids;
 }

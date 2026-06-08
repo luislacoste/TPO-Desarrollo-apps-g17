@@ -70,7 +70,7 @@ async function main() {
     // Subasta — solo crear si no hay ninguna abierta de prueba todavía.
     await client.query(`
       INSERT INTO subastas (fecha, hora, estado, subastador, ubicacion, categoria, moneda)
-      SELECT CURRENT_DATE + INTERVAL '15 days', '14:00', 'abierta', 1000, 'Salón Demo', 'bronce', 'ARS'
+      SELECT CURRENT_DATE + INTERVAL '15 days', '14:00', 'abierta', 1000, 'Salón Demo', 'comun', 'ARS'
       WHERE NOT EXISTS (SELECT 1 FROM subastas WHERE subastador = 1000 AND estado = 'abierta')
     `);
 
