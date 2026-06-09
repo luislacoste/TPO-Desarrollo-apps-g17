@@ -9,7 +9,7 @@ import {
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
 import CategoryBadge from "../components/CategoryBadge";
-import { useAppData } from "../context/AppContext";
+import { useAppData, UiCategory } from "../context/AppContext";
 
 function formatCurrency(amount: number, currency: string = "ARS") {
   return new Intl.NumberFormat("es-AR", {

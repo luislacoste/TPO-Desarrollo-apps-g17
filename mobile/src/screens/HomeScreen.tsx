@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
@@ -58,11 +59,18 @@ export default function HomeScreen({ navigation }: Props) {
   const displayName = `${me?.firstName ?? ""} ${me?.lastName ?? ""}`.trim() || me?.email?.split('@')[0] || 'Bienvenido'
 
   const [refreshing, setRefreshing] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+
   const onRefresh = async () => {
     setRefreshing(true)
     await refreshPublicData()
     setRefreshing(false)
   }
+
+  const q = searchQuery.toLowerCase()
+  const filteredActive = activeAuctions.filter(a => !q || a.title.toLowerCase().includes(q))
+  const filteredUpcoming = upcomingAuctions.filter(a => !q || a.title.toLowerCase().includes(q))
+
 
   return (
     <SafeAreaView style={styles.root}>
@@ -91,9 +99,14 @@ export default function HomeScreen({ navigation }: Props) {
       <View style={styles.searchWrap}>
         <View style={styles.searchBar}>
           <Feather name="search" size={18} color="#737373" />
-          <Text style={styles.searchPlaceholder}>
-            Buscar subastas, articulos...
-          </Text>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Buscar subastas, articulos..."
+            placeholderTextColor="#A3A3A3"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
         </View>
       </View>
 
@@ -124,10 +137,10 @@ export default function HomeScreen({ navigation }: Props) {
         </TouchableOpacity>
 
         {/* En Vivo Ahora */}
-        {activeAuctions.length > 0 && (
+        {filteredActive.length > 0 && (
           <TouchableOpacity
             style={styles.row}
-            onPress={() => navigation.navigate("AuctionLive", { auctionId: activeAuctions[0].id })}
+            onPress={() => navigation.navigate("AuctionLive", { auctionId: filteredActive[0].id })}
           >
             <View style={styles.rowLeft}>
               <MaterialCommunityIcons name="fire" size={20} color="#FB2C36" />
@@ -136,7 +149,7 @@ export default function HomeScreen({ navigation }: Props) {
             <View style={styles.rowRight}>
               <View style={styles.liveBadge}>
                 <Text style={styles.liveBadgeText}>
-                  {activeAuctions.length} activas
+                  {filteredActive.length} activas
                 </Text>
               </View>
               <Feather name="chevron-right" size={16} color="#737373" />
@@ -172,7 +185,7 @@ export default function HomeScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          {upcomingAuctions.map((auction, i) => (
+          {filteredUpcoming.map((auction, i) => (
             <TouchableOpacity
               key={auction.id}
               style={styles.auctionItem}
@@ -215,7 +228,7 @@ export default function HomeScreen({ navigation }: Props) {
             </TouchableOpacity>
           ))}
 
-          {!loading && upcomingAuctions.length === 0 && (
+          {!loading && filteredUpcoming.length === 0 && (
             <View style={styles.emptyBlock}>
               <Text style={styles.emptyTitle}>No hay subastas próximas</Text>
               <Text style={styles.emptyText}>
@@ -320,6 +333,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   searchPlaceholder: { fontSize: 14, color: "#A3A3A3" },
+  searchInput: { flex: 1, fontSize: 14, color: "#0A0A0A" },
   scroll: { flex: 1 },
   row: {
     flexDirection: "row",
