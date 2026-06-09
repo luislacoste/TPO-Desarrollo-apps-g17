@@ -13,7 +13,7 @@ export interface ClienteRow {
   identificador: number;
   numeropais: number | null;
   admitido: 'si' | 'no' | null;
-  categoria: 'comun' | 'especial' | 'plata' | 'oro' | 'platino' | null;
+  categoria: 'bronce' | 'plata' | 'oro' | 'platino' | null;
   verificador: number;
 }
 
@@ -127,7 +127,7 @@ export async function insertClienteShell(
 ) {
   await client.query(
     `INSERT INTO clientes (identificador, numeropais, admitido, categoria, verificador)
-     VALUES ($1, $2, 'no', 'comun', $3)`,
+     VALUES ($1, $2, 'no', 'bronce', $3)`,
     [data.identificador, data.numeropais, data.verificador],
   );
 }

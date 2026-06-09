@@ -16,7 +16,7 @@ export interface SubastaRow {
   capacidad_asistentes: number | null;
   tiene_deposito: 'si' | 'no' | null;
   seguridad_propia: 'si' | 'no' | null;
-  categoria: 'comun' | 'especial' | 'plata' | 'oro' | 'platino' | null;
+  categoria: 'bronce' | 'plata' | 'oro' | 'platino' | null;
   moneda: 'ARS' | 'USD';
   subastador_id: number | null;
   subastador_nombre: string | null;
@@ -316,7 +316,7 @@ export interface CreateSubastaInput {
   estado?: 'abierta' | 'cerrada';
   subastador?: number;
   ubicacion?: string;
-  categoria?: 'comun' | 'especial' | 'plata' | 'oro' | 'platino';
+  categoria?: 'bronce' | 'plata' | 'oro' | 'platino';
   moneda?: 'ARS' | 'USD';
   capacidadasistentes?: number;
   tienedeposito?: 'si' | 'no';
