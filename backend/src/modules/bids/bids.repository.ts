@@ -23,7 +23,7 @@ export interface ItemBidContext {
   catalogo_id: number;
   subasta_id: number;
   subasta_estado: 'abierta' | 'cerrada';
-  subasta_categoria: 'comun' | 'especial' | 'plata' | 'oro' | 'platino' | null;
+  subasta_categoria: 'bronce' | 'plata' | 'oro' | 'platino' | null;
   subasta_moneda: 'ARS' | 'USD';
   precio_base: string;
   subastado: 'si' | 'no' | null;

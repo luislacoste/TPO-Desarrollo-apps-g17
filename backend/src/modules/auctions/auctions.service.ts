@@ -142,7 +142,7 @@ export async function create(data: {
   if (!data.hora)  throw new UnprocessableEntity('hora es requerida');
 
   const VALID_ESTADOS    = ['abierta', 'cerrada'];
-  const VALID_CATEGORIAS = ['comun', 'especial', 'plata', 'oro', 'platino'];
+  const VALID_CATEGORIAS = ['bronce', 'plata', 'oro', 'platino'];
   const VALID_MONEDAS    = ['ARS', 'USD'];
 
   if (data.estado && !VALID_ESTADOS.includes(data.estado)) {
@@ -161,7 +161,7 @@ export async function create(data: {
     estado:              (data.estado as 'abierta' | 'cerrada') ?? 'abierta',
     subastador:          data.subastadorId,
     ubicacion:           data.ubicacion,
-    categoria:           data.categoria as 'comun' | 'especial' | 'plata' | 'oro' | 'platino' | undefined,
+    categoria:           data.categoria as 'bronce' | 'plata' | 'oro' | 'platino' | undefined,
     moneda:              (data.moneda as 'ARS' | 'USD') ?? 'ARS',
     capacidadasistentes: data.capacidadAsistentes,
     tienedeposito:       data.tieneDeposito as 'si' | 'no' | undefined,

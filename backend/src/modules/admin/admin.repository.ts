@@ -21,7 +21,7 @@ export interface AdminUserRow {
   documento: string | null;
   first_name: string | null;
   last_name: string | null;
-  categoria: 'comun' | 'especial' | 'plata' | 'oro' | 'platino' | null;
+  categoria: 'bronce' | 'plata' | 'oro' | 'platino' | null;
   admision_estado: string | null;
   admision_notas: string | null;
   admision_updated_at: Date | null;
