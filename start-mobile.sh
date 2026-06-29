@@ -34,5 +34,5 @@ if [ ! -d "node_modules" ]; then
   npm install
 fi
 
-log "Arrancando Expo — escaneá el QR con Expo Go en tu celular"
-npm start
+log "Arrancando Expo (limpiando caché) — escaneá el QR con Expo Go en tu celular"
+npx expo start -c
