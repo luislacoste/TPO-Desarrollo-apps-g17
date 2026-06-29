@@ -375,6 +375,38 @@ export async function offerSellRequestConditions(
   return sellRepo.findById(id);
 }
 
+/**
+ * Acepta en lote TODAS las solicitudes de venta pendientes/en revisión/con
+ * condiciones ofrecidas → `accepted`. Completa condiciones por defecto donde
+ * falten. Pensado como atajo administrativo (demo / aprobación masiva).
+ */
+export async function acceptAllSellRequests(
+  _actorId: number,
+  data: { precioBase?: number; comisionPorcentaje?: number; moneda?: string },
+) {
+  const VALID_MONEDAS = ['ARS', 'USD'];
+  const precioBase = data.precioBase ?? 1000;
+  const comisionPorcentaje = data.comisionPorcentaje ?? 10;
+  const moneda = data.moneda ?? 'ARS';
+
+  if (!Number.isFinite(precioBase) || precioBase <= 0) {
+    throw new UnprocessableEntity('precioBase inválido');
+  }
+  if (!Number.isFinite(comisionPorcentaje) || comisionPorcentaje < 0) {
+    throw new UnprocessableEntity('comisionPorcentaje inválido');
+  }
+  if (!VALID_MONEDAS.includes(moneda)) {
+    throw new UnprocessableEntity(`moneda inválida: ${moneda}`);
+  }
+
+  const ids = await sellRepo.acceptAllPending({
+    precio_base: precioBase,
+    comision_porcentaje: comisionPorcentaje,
+    moneda,
+  });
+  return { accepted: ids.length, ids };
+}
+
 // ─── Pagos (admin) ────────────────────────────────────────────────────
 
 export async function createPayment(

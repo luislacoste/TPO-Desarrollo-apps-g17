@@ -32,6 +32,7 @@ router.post ('/auctions/:id/close',         asyncHandler(ctrl.closeAuction));
 router.post ('/payment-methods/:id/verify', asyncHandler(ctrl.verifyPaymentMethod));
 
 // ─── Solicitudes de venta ─────────────────────────────────────────────
+router.post ('/sell-requests/accept-all',           asyncHandler(ctrl.acceptAllSellRequests));
 router.post ('/sell-requests/:id/offer-conditions', asyncHandler(ctrl.offerSellRequestConditions));
 
 // ─── Pagos ────────────────────────────────────────────────────────────
