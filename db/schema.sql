@@ -10,8 +10,7 @@
 --   * Typos corregidos: `incativo` → `inactivo`, `carrada` → `cerrada`,
 --     `verificaci?nFinanciera/Judicial` → `verificacion_financiera/judicial`,
 --     `varchar(30) not null.` → `,`.
---   * Enum `categoria` queda como `bronce/plata/oro/platino`
---     (alineado con la corrección del profesor sobre el swagger).
+--   * Enum `categoria` queda como `bronce/plata/oro/platino`.
 --   * Identificadores en minúscula (PG los pliega así por defecto).
 -- =====================================================================
 

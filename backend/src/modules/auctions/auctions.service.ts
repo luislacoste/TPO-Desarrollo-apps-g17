@@ -60,7 +60,7 @@ export async function getCatalog(id: number) {
  *   2. el cliente tiene que estar `admision.estado = approved` y no
  *      tener `bids_blocked = true` (`assertCanParticipate`);
  *   3. la **categoría del cliente** tiene que ser **mayor o igual** que
- *      la categoría de la subasta (bronce<plata<oro<platino);
+ *      la categoría de la subasta (comun<especial<plata<oro<platino);
  *   4. el cliente tiene que tener **al menos un medio de pago verificado**
  *      por la empresa;
  *   5. el cliente **no** puede estar conectado a otra subasta abierta.
@@ -170,6 +170,25 @@ export async function create(data: {
 
   const subasta = await repo.findSubastaById(id);
   return subasta!;
+}
+
+export async function addItems(
+  subastaId: number,
+  responsableId: number,
+  items: { productoId: number; precioBase: number; comision: number }[],
+) {
+  if (!items.length) throw new UnprocessableEntity('Se requiere al menos un ítem');
+
+  const auction = await repo.findSubastaById(subastaId);
+  if (!auction) throw new NotFound('Subasta no encontrada');
+
+  let catalogoId = await repo.findCatalogoBySubasta(subastaId);
+  if (!catalogoId) {
+    catalogoId = await repo.insertCatalogo(subastaId, responsableId);
+  }
+
+  const insertedIds = await repo.insertItemsCatalogo(catalogoId, items);
+  return { catalogoId, insertedIds, count: insertedIds.length };
 }
 
 export async function getStreamUrl(subastaId: number) {

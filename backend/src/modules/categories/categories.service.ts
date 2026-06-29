@@ -1,12 +1,8 @@
 /**
  * Catálogo de categorías de usuario.
  *
- * Estas 4 categorías están definidas en el contrato (swagger) y son
- * estáticas — no se modifican desde la UI ni desde admin. Por eso viven
- * acá como constante en código en lugar de una tabla.
- *
- * Las descripciones reflejan la tabla de "Categorías de usuario" del
- * encabezado del swagger.
+ * Las 4 categorías válidas son bronce, plata, oro y platino (contrato swagger).
+ * Son estáticas — no se modifican desde la UI ni desde admin.
  */
 import { NotFound } from '../../utils/errors';
 
