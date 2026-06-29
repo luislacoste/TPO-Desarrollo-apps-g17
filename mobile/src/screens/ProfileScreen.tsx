@@ -26,7 +26,8 @@ interface Props {
 
 const MENU_ITEMS = [
   { icon: "credit-card", label: "Medios de Pago", screen: "Payments" },
-  { icon: "package", label: "Mis Articulos", screen: null },
+  { icon: "tag", label: "Vender un Articulo", screen: "ProposeItem" },
+  { icon: "package", label: "Mis Articulos", screen: "MyItems" },
   { icon: "heart", label: "Favoritos", screen: null },
   { icon: "settings", label: "Configuracion", screen: "Settings" },
 ];
