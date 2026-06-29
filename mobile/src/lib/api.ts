@@ -179,8 +179,9 @@ async function request<T>(path: string, init?: RequestInit, token?: string): Pro
 }
 
 // ─── Mock mode ────────────────────────────────────────────────────────────────
-// Poné MOCK_MODE = false cuando el backend esté levantado
-const MOCK_MODE = true
+// Los datos (subastas, catálogo, ítems, pujas) salen del backend real.
+// Poné MOCK_MODE = true sólo para desarrollar la UI sin backend levantado.
+const MOCK_MODE = false
 
 function delay<T>(value: T, ms = 700): Promise<T> {
   return new Promise(resolve => setTimeout(() => resolve(value), ms))
