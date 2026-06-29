@@ -128,13 +128,25 @@ async function main() {
       );
     }
 
+    // Martillero (subastador) para la subasta — persona + fila en subastadores.
+    await client.query(
+      `INSERT INTO personas (identificador, documento, nombre, direccion, estado)
+       VALUES (9200, '30999888', 'Martillero Demo', 'N/A', 'activo')
+       ON CONFLICT (identificador) DO NOTHING`,
+    );
+    await client.query(
+      `INSERT INTO subastadores (identificador, matricula, region)
+       VALUES (9200, 'MAT-DEMO-001', 'CABA')
+       ON CONFLICT (identificador) DO NOTHING`,
+    );
+
     // Subasta (abierta) + catálogo. Fecha futura para cumplir el CHECK (> hoy+10).
     await client.query(
       `INSERT INTO subastas
-         (identificador, fecha, hora, estado, ubicacion, categoria, moneda)
-       VALUES (9001, CURRENT_DATE + INTERVAL '15 days', '19:00', 'abierta',
+         (identificador, fecha, hora, estado, subastador, ubicacion, categoria, moneda)
+       VALUES (9001, CURRENT_DATE + INTERVAL '15 days', '19:00', 'abierta', 9200,
                'Camisetas de fútbol - CABA', 'comun', 'ARS')
-       ON CONFLICT (identificador) DO NOTHING`,
+       ON CONFLICT (identificador) DO UPDATE SET subastador = EXCLUDED.subastador`,
     );
     await client.query(
       `INSERT INTO catalogos (identificador, descripcion, subasta, responsable)
