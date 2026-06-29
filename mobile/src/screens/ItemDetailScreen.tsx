@@ -31,12 +31,11 @@ interface Props {
   route: { params: { item: LiveItem; auctionEndDate: string | null; auctionId: number } }
 }
 
-function getMinIncrement(currentBid: number): number {
-  if (currentBid >= 2000000) return 100000
-  if (currentBid >= 500000) return 50000
-  if (currentBid >= 100000) return 25000
-  return 5000
-}
+// Reglas de monto del backend (bids.service):
+//   mínimo = oferta actual + 1% del precio base (o el precio base si no hay pujas)
+//   máximo = oferta actual + 20% del precio base (sin tope en subastas oro/platino)
+const MIN_PCT = 0.01
+const MAX_PCT = 0.20
 
 function secondsUntil(dateString: string | null): number {
   if (!dateString) return 0
@@ -60,7 +59,10 @@ function formatARS(amount: number): string {
 
 export default function ItemDetailScreen({ navigation, route }: Props) {
   const { item, auctionEndDate, auctionId } = route.params
-  const { session } = useAppData()
+  const { session, activeAuctions, allAuctions } = useAppData()
+  // Subasta a la que pertenece el ítem, tomada de los datos del backend ya
+  // cargados en contexto (mismo origen que usa AuctionLiveScreen).
+  const auction = [...activeAuctions, ...allAuctions].find(a => a.id === String(auctionId))
 
   const [detail, setDetail] = useState<BackendItemDetail | null>(null)
   const [liveBid, setLiveBid] = useState<number | undefined>(item.currentBid)
@@ -71,9 +73,23 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
   const [bidLoading, setBidLoading] = useState(false)
   const [bidError, setBidError] = useState<string | null>(null)
 
-  const currentBid = liveBid ?? item.basePrice
-  const minIncrement = getMinIncrement(currentBid)
-  const [bidAmount, setBidAmount] = useState(currentBid + minIncrement)
+  // Datos de catálogo/ítem: el detalle del backend manda; el item de
+  // navegación es sólo fallback instantáneo mientras `detail` carga.
+  const basePrice = detail?.precio_base != null ? Number(detail.precio_base) : item.basePrice
+  const isSold = detail ? detail.subastado === 'si' : item.subastado
+  const itemTitle = detail?.descripcion_catalogo ?? item.title
+
+  const currentBid = liveBid ?? basePrice
+  // Paso = 1% del precio base (redondeado hacia arriba para no caer por debajo
+  // del mínimo del backend). Mínimo/máximo válidos según haya o no pujas previas.
+  const hasBid = (liveBid ?? 0) > 0
+  const minStep = Math.max(1, Math.ceil(basePrice * MIN_PCT))
+  const minBid = hasBid ? currentBid + minStep : basePrice
+  const capExempt = auction?.category === 'oro' || auction?.category === 'platino'
+  const maxBid = capExempt
+    ? Number.POSITIVE_INFINITY
+    : currentBid + Math.floor(basePrice * MAX_PCT)
+  const [bidAmount, setBidAmount] = useState(minBid)
 
   const { connected, lastEvent } = useAuctionSocket(auctionId)
 
@@ -84,15 +100,19 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
 
   const fetchLiveBid = useCallback(async () => {
     try {
-      const bids = await api.getBidsForAuction(auctionId)
-      const itemBids = bids.filter(b => b.item_id === Number(item.id))
-      if (itemBids.length > 0) {
-        const maxBid = Math.max(...itemBids.map(b => Number(b.importe)))
+      // Mejor oferta desde el endpoint dedicado del backend; el listado sólo
+      // se usa para el contador de ofertas del ítem.
+      const [best, bids] = await Promise.all([
+        api.getCurrentBid(auctionId, Number(item.id)),
+        api.getBidsForAuction(auctionId),
+      ])
+      setLiveBidCount(bids.filter(b => b.item_id === Number(item.id)).length)
+      if (best) {
+        const maxBid = Number(best.importe)
         setLiveBid(prev => {
           if (prev !== maxBid) flashBidUpdate()
           return maxBid
         })
-        setLiveBidCount(itemBids.length)
       }
     } catch {}
   }, [auctionId, item.id, flashBidUpdate])
@@ -118,16 +138,13 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
       setLiveBid(prev => Math.max(prev ?? 0, lastEvent.importe))
       setLiveBidCount(prev => prev + 1)
       flashBidUpdate()
-      // Keep bid amount valid against the new current bid
-      setBidAmount(prev => {
-        const newMin = lastEvent.importe + getMinIncrement(lastEvent.importe)
-        return Math.max(prev, newMin)
-      })
+      // Mantener el monto válido contra la nueva oferta (mínimo del backend).
+      setBidAmount(prev => Math.max(prev, lastEvent.importe + minStep))
     }
     if (lastEvent.type === 'auction_ended') {
       setTimeRemaining(0)
     }
-  }, [lastEvent, item.id, flashBidUpdate])
+  }, [lastEvent, item.id, flashBidUpdate, minStep])
 
   const handleOffer = async () => {
     if (bidLoading) return
@@ -151,16 +168,17 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
     }
   }
 
-  const quickIncrements = [minIncrement, minIncrement * 2, minIncrement * 5]
+  const quickIncrements = [minStep, minStep * 2, minStep * 5]
   const selectedQuickIndex = quickIncrements.indexOf(bidAmount - currentBid)
 
-  const decrement = () => setBidAmount(prev => Math.max(currentBid + minIncrement, prev - minIncrement))
-  const increment = () => setBidAmount(prev => prev + minIncrement)
-  const applyQuick = (inc: number) => setBidAmount(currentBid + inc)
+  const decrement = () => setBidAmount(prev => Math.max(minBid, prev - minStep))
+  const increment = () => setBidAmount(prev => Math.min(maxBid, prev + minStep))
+  const applyQuick = (inc: number) => setBidAmount(Math.min(maxBid, currentBid + inc))
 
   const overCurrent = bidAmount - currentBid
   const longDesc = detail?.descripcion_completa ?? detail?.descripcion_catalogo ?? item.description
   const owner = detail?.duenio_nombre
+  const auctionClosed = auction?.status === 'ended' || timeRemaining === 0
 
   return (
     <SafeAreaView style={styles.root}>
@@ -170,12 +188,12 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
           <Feather name="arrow-left" size={20} color="#0a3d54" />
         </TouchableOpacity>
         <View style={styles.topBarText}>
-          <Text style={styles.topBarSub} numberOfLines={1}>Subasta</Text>
-          <Text style={styles.topBarTitle} numberOfLines={1}>{item.title}</Text>
+          <Text style={styles.topBarSub} numberOfLines={1}>{auction?.title ?? 'Subasta'}</Text>
+          <Text style={styles.topBarTitle} numberOfLines={1}>{itemTitle}</Text>
         </View>
-        <View style={styles.liveBadge}>
-          <View style={styles.liveDot} />
-          <Text style={styles.liveBadgeText}>EN VIVO</Text>
+        <View style={[styles.liveBadge, auctionClosed && styles.liveBadgeClosed]}>
+          {!auctionClosed && <View style={styles.liveDot} />}
+          <Text style={styles.liveBadgeText}>{auctionClosed ? 'CERRADA' : 'EN VIVO'}</Text>
         </View>
       </View>
 
@@ -206,7 +224,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
               <Text style={styles.metaText}>{connected ? 'En vivo' : 'Conectando…'}</Text>
             </View>
           </View>
-          <Text style={styles.itemTitle}>{item.title}</Text>
+          <Text style={styles.itemTitle}>{itemTitle}</Text>
           <View style={styles.countdownRow}>
             <Feather name="zap" size={18} color={timeRemaining > 0 ? '#FB2C36' : '#737373'} />
             <Text style={[styles.countdownText, timeRemaining === 0 && { color: '#737373' }]}>
@@ -230,13 +248,17 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.bidBarLabel}>Precio base</Text>
-            <Text style={styles.bidBarValue}>{formatARS(item.basePrice)}</Text>
+            <Text style={styles.bidBarValue}>{formatARS(basePrice)}</Text>
           </View>
         </View>
 
         {/* Bid input section */}
         <View style={styles.bidSection}>
           <Text style={styles.bidSectionTitle}>Tu oferta</Text>
+          <Text style={styles.bidRangeHint}>
+            Mínimo {formatARS(minBid)}
+            {capExempt ? ' · sin tope (oro/platino)' : ` · máximo ${formatARS(maxBid)}`}
+          </Text>
 
           {/* +/- controls */}
           <View style={styles.bidControls}>
@@ -275,15 +297,15 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
 
           {/* Submit button */}
           <TouchableOpacity
-            style={[styles.offerBtn, (bidLoading || item.subastado || timeRemaining === 0) && { opacity: 0.6 }]}
+            style={[styles.offerBtn, (bidLoading || isSold || auctionClosed) && { opacity: 0.6 }]}
             onPress={handleOffer}
             activeOpacity={0.85}
-            disabled={item.subastado || timeRemaining === 0}
+            disabled={isSold || auctionClosed}
           >
             {bidLoading
               ? <ActivityIndicator color="#FAFAFA" />
               : <Text style={styles.offerBtnText}>
-                  {item.subastado ? 'Item ya subastado' : `Ofertar ${formatARS(bidAmount)}`}
+                  {isSold ? 'Item ya subastado' : `Ofertar ${formatARS(bidAmount)}`}
                 </Text>
             }
           </TouchableOpacity>
@@ -318,7 +340,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
             {bidStatus === 'success' ? (
               <>
                 <Text style={styles.overlaySubtitle}>Tu oferta de {formatARS(bidAmount)}</Text>
-                <Text style={styles.overlaySubtitle}>por {item.title} fue registrada</Text>
+                <Text style={styles.overlaySubtitle}>por {itemTitle} fue registrada</Text>
               </>
             ) : (
               <Text style={styles.overlaySubtitle}>{bidError ?? 'Intente ofertar nuevamente'}</Text>
@@ -378,6 +400,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     flexShrink: 0,
   },
+  liveBadgeClosed: { backgroundColor: '#737373' },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#FFFFFF' },
   liveBadgeText: { fontSize: 11, fontWeight: '700', color: '#FFFFFF' },
 
@@ -418,6 +441,7 @@ const styles = StyleSheet.create({
 
   bidSection: { padding: 16, paddingBottom: 24, gap: 14 },
   bidSectionTitle: { fontSize: 16, fontWeight: '600', color: '#0A0A0A' },
+  bidRangeHint: { fontSize: 12, color: '#737373', marginTop: -8 },
 
   bidControls: {
     flexDirection: 'row',
