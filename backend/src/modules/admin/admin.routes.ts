@@ -34,6 +34,7 @@ router.post ('/payment-methods/:id/verify', asyncHandler(ctrl.verifyPaymentMetho
 // ─── Solicitudes de venta ─────────────────────────────────────────────
 router.post ('/sell-requests/accept-all',           asyncHandler(ctrl.acceptAllSellRequests));
 router.post ('/sell-requests/:id/offer-conditions', asyncHandler(ctrl.offerSellRequestConditions));
+router.post ('/sell-requests/:id/publish',          asyncHandler(ctrl.publishSellRequest));
 
 // ─── Pagos ────────────────────────────────────────────────────────────
 router.post ('/payments',                asyncHandler(ctrl.createPayment));

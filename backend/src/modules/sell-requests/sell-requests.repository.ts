@@ -214,6 +214,14 @@ export async function acceptAllPending(defaults: {
   return rows.map((r) => r.identificador);
 }
 
+/** Asigna el producto creado al publicar la solicitud como subasta. */
+export async function setProductoId(id: number, productoId: number): Promise<void> {
+  await query(
+    `UPDATE solicitudes_venta SET producto_id = $2, updated_at = NOW() WHERE identificador = $1`,
+    [id, productoId],
+  );
+}
+
 export async function offerConditions(
   id: number,
   data: { precio_base: number; comision_porcentaje: number; moneda: string; notas: string | null },

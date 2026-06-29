@@ -366,6 +366,22 @@ export async function insertCatalogo(subastaId: number, responsableId: number): 
   return rows[0].id;
 }
 
+/** Crea un producto (revisor = empleado admin, duenio = vendedor). */
+export async function insertProducto(data: {
+  descripcion: string;
+  duenioId: number;
+  revisorId: number;
+}): Promise<number> {
+  const desc = data.descripcion.slice(0, 300);
+  const { rows } = await query<{ id: number }>(
+    `INSERT INTO productos (fecha, disponible, descripcioncatalogo, descripcioncompleta, revisor, duenio)
+     VALUES (CURRENT_DATE, 'si', $1, $2, $3, $4)
+     RETURNING identificador AS id`,
+    [desc, desc, data.revisorId, data.duenioId],
+  );
+  return rows[0].id;
+}
+
 export interface NewItemInput {
   productoId: number;
   precioBase: number;
