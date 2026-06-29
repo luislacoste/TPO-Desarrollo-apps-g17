@@ -19,6 +19,10 @@ if (env.nodeEnv !== 'test') {
   app.use(morgan(env.nodeEnv === 'production' ? 'combined' : 'dev'));
 }
 
+// Archivos subidos (imágenes de solicitudes de venta, documentos, etc.).
+// Se sirven de forma estática para que la app pueda mostrarlos por URL.
+app.use('/uploads', express.static(env.uploads.dir));
+
 // Rutas versionadas
 app.use('/v1', routes);
 

@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
 });
 
 const ACCEPTED = new Set([
-  'image/jpeg', 'image/png', 'application/pdf',
+  'image/jpeg', 'image/png', 'image/webp', 'application/pdf',
   'image/heic', 'image/heif',  // iOS default camera format
 ]);
 

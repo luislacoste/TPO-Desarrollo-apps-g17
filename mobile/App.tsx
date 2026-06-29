@@ -22,6 +22,9 @@ import SettingsScreen from "./src/screens/SettingsScreen";
 import CompanyConditionsScreen from "./src/screens/CompanyConditionsScreen";
 import PendingApprovalScreen from "./src/screens/PendingApprovalScreen";
 import SetPasswordScreen from "./src/screens/SetPasswordScreen";
+import ProposeItemScreen from "./src/screens/ProposeItemScreen";
+import MyItemsScreen from "./src/screens/MyItemsScreen";
+import MyItemDetailScreen from "./src/screens/MyItemDetailScreen";
 
 export type RootStackParamList = {
   Splash: undefined;
@@ -35,6 +38,9 @@ export type RootStackParamList = {
   AuctionLive: { auctionId: string };
   ItemDetail: { itemId: string };
   Settings: undefined;
+  ProposeItem: undefined;
+  MyItems: undefined;
+  MyItemDetail: { id: number };
 };
 
 const TAB_TO_NAV_ITEM: Record<string, NavItem> = {
@@ -107,6 +113,9 @@ export default function App() {
               <Stack.Screen name="AuctionLive" component={AuctionLiveScreen} />
               <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
+              <Stack.Screen name="ProposeItem" component={ProposeItemScreen} />
+              <Stack.Screen name="MyItems" component={MyItemsScreen} />
+              <Stack.Screen name="MyItemDetail" component={MyItemDetailScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </AppProvider>
