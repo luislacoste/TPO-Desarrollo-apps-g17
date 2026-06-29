@@ -78,13 +78,20 @@ async function issueTokens(payload: {
  * No fija password todavía (eso es step 3).
  */
 export async function registerStart(input: RegisterStartInput): Promise<{ userId: number }> {
-  // 1) email no debe estar ya tomado
-  if (await repo.emailExists(input.email)) {
-    throw new Conflict('El email ya está registrado');
-  }
-  // 2) DNI tampoco
-  if (await repo.documentoExists(input.documento)) {
-    throw new Conflict('El documento ya está registrado');
+  // 1) email y DNI no deben estar tomados. Chequeamos ambos para poder
+  //    reportar los dos conflictos a la vez (mensaje no ambiguo).
+  const [emailTaken, documentoTaken] = await Promise.all([
+    repo.emailExists(input.email),
+    repo.documentoExists(input.documento),
+  ]);
+  if (emailTaken || documentoTaken) {
+    const partes: string[] = [];
+    if (emailTaken) partes.push('El email ya está registrado');
+    if (documentoTaken) partes.push('El documento ya está registrado');
+    throw new Conflict(partes.join('. '), {
+      email: emailTaken,
+      documento: documentoTaken,
+    });
   }
   // 3) país tiene que existir en la tabla `paises`
   const paisNumero = await repo.findPaisNumeroByNombre(input.pais);
