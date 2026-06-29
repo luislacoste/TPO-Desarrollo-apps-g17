@@ -80,8 +80,13 @@ type AppContextValue = {
 const AppContext = createContext<AppContextValue | null>(null);
 
 function formatAuctionDate(fecha: string, hora: string): Date {
-  // iOS is strict with date string parsing — build from numeric parts to avoid RangeError
-  const [year, month, day] = (fecha ?? "").split("-").map(Number);
+  // El backend puede devolver `fecha` como 'YYYY-MM-DD' o como timestamp ISO
+  // ('2026-07-14T03:00:00.000Z'). Tomamos sólo la parte de fecha para no
+  // romper el parseo (si no, el "día" queda con la hora pegada → NaN → la
+  // fecha caía a "ahora" y la subasta se veía CERRADA / el countdown en 0).
+  const datePart = (fecha ?? "").slice(0, 10);
+  const [year, month, day] = datePart.split("-").map(Number);
+  // `hora` puede venir como 'HH:MM' o 'HH:MM:SS'.
   const [hours, minutes, seconds = 0] = (hora ?? "00:00").split(":").map(Number);
   const d = new Date(year, month - 1, day, hours, minutes, seconds);
   return isNaN(d.getTime()) ? new Date() : d;

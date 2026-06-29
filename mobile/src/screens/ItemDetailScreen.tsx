@@ -72,11 +72,13 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
   const [bidStatus, setBidStatus] = useState<BidStatus>('idle')
   const [bidLoading, setBidLoading] = useState(false)
   const [bidError, setBidError] = useState<string | null>(null)
+  // Se vende en vivo (evento item_sold del WebSocket para este ítem).
+  const [liveSold, setLiveSold] = useState(false)
 
   // Datos de catálogo/ítem: el detalle del backend manda; el item de
   // navegación es sólo fallback instantáneo mientras `detail` carga.
   const basePrice = detail?.precio_base != null ? Number(detail.precio_base) : item.basePrice
-  const isSold = detail ? detail.subastado === 'si' : item.subastado
+  const isSold = liveSold || (detail ? detail.subastado === 'si' : item.subastado)
   const itemTitle = detail?.descripcion_catalogo ?? item.title
 
   const currentBid = liveBid ?? basePrice
@@ -140,6 +142,10 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
       flashBidUpdate()
       // Mantener el monto válido contra la nueva oferta (mínimo del backend).
       setBidAmount(prev => Math.max(prev, lastEvent.importe + minStep))
+    }
+    if (lastEvent.type === 'item_sold' && lastEvent.itemId === Number(item.id)) {
+      setLiveSold(true)
+      if (typeof lastEvent.importe === 'number') setLiveBid(prev => Math.max(prev ?? 0, lastEvent.importe))
     }
     if (lastEvent.type === 'auction_ended') {
       setTimeRemaining(0)
