@@ -180,7 +180,7 @@ async function request<T>(path: string, init?: RequestInit, token?: string): Pro
 
 // ─── Mock mode ────────────────────────────────────────────────────────────────
 // Poné MOCK_MODE = false cuando el backend esté levantado
-const MOCK_MODE = false
+const MOCK_MODE = true
 
 function delay<T>(value: T, ms = 700): Promise<T> {
   return new Promise(resolve => setTimeout(() => resolve(value), ms))

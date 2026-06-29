@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   View,
   Text,
@@ -65,6 +65,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
   const [detail, setDetail] = useState<BackendItemDetail | null>(null)
   const [liveBid, setLiveBid] = useState<number | undefined>(item.currentBid)
   const [liveBidCount, setLiveBidCount] = useState(item.bidCount)
+  const [bidJustUpdated, setBidJustUpdated] = useState(false)
   const [timeRemaining, setTimeRemaining] = useState(() => secondsUntil(auctionEndDate))
   const [bidStatus, setBidStatus] = useState<BidStatus>('idle')
   const [bidLoading, setBidLoading] = useState(false)
@@ -76,10 +77,33 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
 
   const { connected, lastEvent } = useAuctionSocket(auctionId)
 
+  const flashBidUpdate = useCallback(() => {
+    setBidJustUpdated(true)
+    setTimeout(() => setBidJustUpdated(false), 2000)
+  }, [])
+
+  const fetchLiveBid = useCallback(async () => {
+    try {
+      const bids = await api.getBidsForAuction(auctionId)
+      const itemBids = bids.filter(b => b.item_id === Number(item.id))
+      if (itemBids.length > 0) {
+        const maxBid = Math.max(...itemBids.map(b => Number(b.importe)))
+        setLiveBid(prev => {
+          if (prev !== maxBid) flashBidUpdate()
+          return maxBid
+        })
+        setLiveBidCount(itemBids.length)
+      }
+    } catch {}
+  }, [auctionId, item.id, flashBidUpdate])
+
   // Fetch item detail for descripcion_completa and duenio_nombre
   useEffect(() => {
     api.getItemDetail(Number(item.id), session?.accessToken).then(setDetail).catch(() => {})
   }, [item.id, session?.accessToken])
+
+  // Fetch authoritative best bid from backend on mount
+  useEffect(() => { fetchLiveBid() }, [fetchLiveBid])
 
   // Countdown based on real auction end date
   useEffect(() => {
@@ -93,6 +117,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
     if (lastEvent.type === 'bid_placed' && lastEvent.itemId === Number(item.id)) {
       setLiveBid(prev => Math.max(prev ?? 0, lastEvent.importe))
       setLiveBidCount(prev => prev + 1)
+      flashBidUpdate()
       // Keep bid amount valid against the new current bid
       setBidAmount(prev => {
         const newMin = lastEvent.importe + getMinIncrement(lastEvent.importe)
@@ -102,7 +127,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
     if (lastEvent.type === 'auction_ended') {
       setTimeRemaining(0)
     }
-  }, [lastEvent, item.id])
+  }, [lastEvent, item.id, flashBidUpdate])
 
   const handleOffer = async () => {
     if (bidLoading) return
@@ -117,6 +142,7 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
       await api.joinAuction(session.accessToken, auctionId)
       await api.placeBid(session.accessToken, { itemId: Number(item.id), importe: bidAmount })
       setBidStatus('success')
+      await fetchLiveBid()
     } catch (err: any) {
       setBidError(err?.message ?? 'No se pudo realizar la puja')
       setBidStatus('error')
@@ -198,7 +224,9 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
         <View style={styles.bidBar}>
           <View>
             <Text style={styles.bidBarLabel}>Oferta actual</Text>
-            <Text style={styles.bidBarValue}>{formatARS(currentBid)}</Text>
+            <Text style={[styles.bidBarValue, bidJustUpdated && styles.bidBarValueUpdated]}>
+              {formatARS(currentBid)}
+            </Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={styles.bidBarLabel}>Precio base</Text>
@@ -386,6 +414,7 @@ const styles = StyleSheet.create({
   },
   bidBarLabel: { fontSize: 12, color: '#737373', lineHeight: 16 },
   bidBarValue: { fontSize: 20, fontWeight: '700', color: '#0A0A0A', lineHeight: 28 },
+  bidBarValueUpdated: { color: '#16A34A' },
 
   bidSection: { padding: 16, paddingBottom: 24, gap: 14 },
   bidSectionTitle: { fontSize: 16, fontWeight: '600', color: '#0A0A0A' },
