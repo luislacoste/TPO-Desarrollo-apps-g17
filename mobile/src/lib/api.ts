@@ -260,7 +260,8 @@ async function request<T>(path: string, init?: RequestInit, token?: string): Pro
 }
 
 // ─── Mock mode ────────────────────────────────────────────────────────────────
-// Poné MOCK_MODE = false cuando el backend esté levantado
+// Los datos (subastas, catálogo, ítems, pujas) salen del backend real.
+// Poné MOCK_MODE = true sólo para desarrollar la UI sin backend levantado.
 const MOCK_MODE = false
 
 function delay<T>(value: T, ms = 700): Promise<T> {
@@ -318,6 +319,7 @@ const mockApi = {
   listAuctions: () => delay({ items: [] as BackendAuction[], page: 1, limit: 10, total: 0 }),
   getAuctionCatalog: (_id: number) => delay<BackendAuctionItem[]>([]),
   getBidsForAuction: (_id: number) => delay<BackendBidRow[]>([]),
+  getCurrentBid: (_auctionId: number, _itemId: number) => delay<BackendBidRow | null>(null),
   getItemDetail: (_id: number, _token?: string) => delay<BackendItemDetail>({} as BackendItemDetail),
   joinAuction: (_token: string, _auctionId: number) =>
     delay({ sessionId: 1, asistente: { id: 1, numeropostor: 1 }, wsUrl: '' }),
@@ -406,6 +408,15 @@ const realApi = {
 
   getAuctionCatalog: (id: number) => request<BackendAuctionItem[]>(`/auctions/${id}/catalog`),
   getBidsForAuction: (id: number) => request<BackendBidRow[]>(`/bids/auction/${id}`),
+  // Mejor oferta (puja más alta) del ítem según el backend. El endpoint
+  // responde 404 cuando todavía no hay pujas → lo tratamos como null.
+  getCurrentBid: async (auctionId: number, itemId: number) => {
+    try {
+      return await request<BackendBidRow>(`/bids/auction/${auctionId}/item/${itemId}/current`)
+    } catch {
+      return null
+    }
+  },
   getItemDetail: (id: number, token?: string) =>
     request<BackendItemDetail>(`/items/${id}`, undefined, token),
   joinAuction: (token: string, auctionId: number) =>
