@@ -10,6 +10,7 @@
     "db:reset":   "ts-node-dev --transpile-only --no-notify src/scripts/dbReset.ts",
     "seed:admin": "ts-node-dev --transpile-only --no-notify src/scripts/seedAdmin.ts",
     "seed:demo":  "ts-node-dev --transpile-only --no-notify src/scripts/seedDemoData.ts",
+    "seed:users": "ts-node-dev --transpile-only --no-notify src/scripts/seedUsers.ts",
     "seed:test":  "ts-node-dev --transpile-only --no-notify src/scripts/seedTestData.ts"
   },
   "dependencies": {
