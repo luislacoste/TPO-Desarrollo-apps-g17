@@ -1,12 +1,19 @@
 /**
  * Catálogo de categorías de usuario.
  *
- * Las 4 categorías válidas son bronce, plata, oro y platino (contrato swagger).
+ * Las 5 categorías válidas son común, especial, plata, oro y platino
+ * (contrato swagger), ordenadas por `tier` ascendente.
+ *
+ * La categoría del cliente determina **a qué subastas puede acceder**: sólo
+ * puede unirse a una subasta cuyo `tier` sea menor o igual al suyo
+ * (común < especial < plata < oro < platino). La regla se aplica en
+ * `auctions.service.join`.
+ *
  * Son estáticas — no se modifican desde la UI ni desde admin.
  */
 import { NotFound } from '../../utils/errors';
 
-export type CategoryId = 'bronce' | 'plata' | 'oro' | 'platino';
+export type CategoryId = 'comun' | 'especial' | 'plata' | 'oro' | 'platino';
 
 export interface Category {
   id: CategoryId;
@@ -20,23 +27,37 @@ export interface Category {
 
 const CATEGORIES: ReadonlyArray<Category> = [
   {
-    id: 'bronce',
-    name: 'Bronce',
+    id: 'comun',
+    name: 'Común',
     tier: 1,
-    description: 'Acceso básico a subastas públicas.',
+    description: 'Acceso básico a subastas públicas de categoría común.',
     benefits: [
-      'Participar en subastas públicas',
+      'Participar en subastas de categoría común',
       'Hacer pujas con los métodos de pago estándar',
     ],
     requirements: ['Registro completado y aprobado por la empresa.'],
   },
   {
+    id: 'especial',
+    name: 'Especial',
+    tier: 2,
+    description: 'Acceso a subastas comunes y especiales.',
+    benefits: [
+      'Todo lo de Común',
+      'Acceso a subastas de categoría especial',
+    ],
+    requirements: [
+      'Participación sostenida sin multas',
+    ],
+  },
+  {
     id: 'plata',
     name: 'Plata',
-    tier: 2,
+    tier: 3,
     description: 'Beneficios extra, límite de pujas mayor.',
     benefits: [
-      'Todo lo de Bronce',
+      'Todo lo de Especial',
+      'Acceso a subastas de categoría plata',
       'Límite de pujas más alto',
       'Notificaciones prioritarias',
     ],
@@ -48,11 +69,11 @@ const CATEGORIES: ReadonlyArray<Category> = [
   {
     id: 'oro',
     name: 'Oro',
-    tier: 3,
+    tier: 4,
     description: 'Subastas exclusivas, beneficios premium.',
     benefits: [
       'Todo lo de Plata',
-      'Acceso a subastas exclusivas',
+      'Acceso a subastas de categoría oro',
       'Soporte prioritario',
     ],
     requirements: [
@@ -63,10 +84,11 @@ const CATEGORIES: ReadonlyArray<Category> = [
   {
     id: 'platino',
     name: 'Platino',
-    tier: 4,
+    tier: 5,
     description: 'Acceso completo, sin límites de reglas estándar.',
     benefits: [
       'Todo lo de Oro',
+      'Acceso a subastas de categoría platino',
       'Sin tope de puja',
       'Acceso a subastas privadas',
     ],

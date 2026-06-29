@@ -172,7 +172,7 @@ Endpoints internos para personal de la empresa. **Todos requieren JWT con `role:
 | GET | `/admin/users/{id}` | Bearer (admin) | Detalle del usuario con datos de admisión |
 | POST | `/admin/users/{id}/approve` | Bearer (admin) | Aprobar usuario pendiente (puede asignar categoría inicial) |
 | POST | `/admin/users/{id}/reject` | Bearer (admin) | Rechazar usuario (motivo obligatorio) |
-| PATCH | `/admin/users/{id}/category` | Bearer (admin) | Asignar/cambiar categoría (`bronce`, `plata`, `oro`, `platino`) |
+| PATCH | `/admin/users/{id}/category` | Bearer (admin) | Asignar/cambiar categoría (`comun`, `especial`, `plata`, `oro`, `platino`) |
 | PATCH | `/admin/users/{id}/admission` | Bearer (admin) | Cambiar estado de admisión (`pending`, `approved`, `rejected`, `blocked`, `suspended`) |
 | GET | `/admin/fines` | Bearer (admin) | Listar multas de toda la plataforma (filtros: `status`, `userId`) |
 | POST | `/admin/payments/{id}/apply-fine` | Bearer (admin) | Aplicar multa del 10% sobre un pago impago (manual) |
@@ -186,7 +186,7 @@ Endpoints internos para personal de la empresa. **Todos requieren JWT con `role:
 
 | Nombre | Uso breve |
 |--------|-----------|
-| `UserCategory` | `bronce` \| `plata` \| `oro` \| `platino` |
+| `UserCategory` | `comun` \| `especial` \| `plata` \| `oro` \| `platino` — determina a qué subastas accede el cliente (cliente ≥ categoría de la subasta) |
 | `UserRole` | `user` \| `admin` |
 | `AdmissionStatus` | `pending` \| `approved` \| `rejected` \| `blocked` \| `suspended` |
 | `User` | Perfil base (incluye `role`, `admissionStatus`, `admissionNotes`, `bidsBlocked`) |

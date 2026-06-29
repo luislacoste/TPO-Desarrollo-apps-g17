@@ -17,12 +17,17 @@ info:
     ```
 
     ### Categorías de usuario
-    | Categoría | Rol |
-    |-----------|-----|
-    | Bronce | Acceso básico a subastas públicas |
-    | Plata | Beneficios extra, límite de pujas mayor |
-    | Oro | Subastas exclusivas, beneficios premium |
-    | Platino | Acceso completo, sin límites de reglas estándar |
+    La categoría asignada al cliente determina **a qué subastas puede acceder**:
+    sólo puede unirse a una subasta cuya categoría sea menor o igual a la suya,
+    según el orden común < especial < plata < oro < platino.
+
+    | Categoría | Nivel | Rol |
+    |-----------|-------|-----|
+    | Común | 1 | Acceso básico a subastas de categoría común |
+    | Especial | 2 | Acceso a subastas comunes y especiales |
+    | Plata | 3 | Beneficios extra, límite de pujas mayor |
+    | Oro | 4 | Subastas exclusivas, beneficios premium |
+    | Platino | 5 | Acceso completo, sin límites de reglas estándar |
 
     ### Roles y permisos
     | Rol | Descripción |
@@ -1840,7 +1845,7 @@ paths:
       summary: Asignar categoría a un usuario
       description: |
         Cambia la categoría comercial del usuario
-        (`bronce`, `plata`, `oro`, `platino`). Requiere rol `admin`.
+        (`comun`, `especial`, `plata`, `oro`, `platino`). Requiere rol `admin`.
       x-required-role: admin
       parameters:
         - $ref: "#/components/parameters/PathId"
@@ -2206,8 +2211,12 @@ components:
 
     UserCategory:
       type: string
-      enum: [bronce, plata, oro, platino]
-      description: Categoría asignada por la empresa según historial del usuario
+      enum: [comun, especial, plata, oro, platino]
+      description: >-
+        Categoría asignada por la empresa según historial del usuario.
+        Determina a qué subastas puede acceder (el cliente sólo se une a
+        subastas de categoría menor o igual a la suya, en el orden
+        comun < especial < plata < oro < platino).
 
     UserRole:
       type: string

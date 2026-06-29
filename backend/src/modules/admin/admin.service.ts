@@ -19,7 +19,7 @@ import * as auctionsRepo from '../auctions/auctions.repository';
 import { env } from '../../config/env';
 import { BadRequest, Conflict, NotFound, UnprocessableEntity } from '../../utils/errors';
 
-const VALID_CATEGORIES = ['bronce', 'plata', 'oro', 'platino'] as const;
+const VALID_CATEGORIES = ['comun', 'especial', 'plata', 'oro', 'platino'] as const;
 const VALID_ADMISSION  = ['pending', 'approved', 'rejected', 'blocked', 'suspended'] as const;
 
 // ─── Helpers de respuesta ─────────────────────────────────────────────

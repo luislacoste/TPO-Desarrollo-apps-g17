@@ -22,7 +22,7 @@ type CategoryStyle = {
 
 const categoryStyles: Record<UiCategory, CategoryStyle> = {
   comun: {
-    label: "Comun",
+    label: "Común",
     bg: "#F5F5F5",
     text: "#737373",
     border: "#E5E5E5",
