@@ -120,6 +120,18 @@ export function getWsBaseUrl() {
   return `ws://${inferHost()}:4000`
 }
 
+/** Base para archivos servidos estáticamente (ej: /uploads/xxx.jpg). */
+export function getMediaBaseUrl() {
+  return `http://${inferHost()}:4000`
+}
+
+/** Convierte una ruta relativa del backend (`/uploads/x`) en URL absoluta. */
+export function resolveMediaUrl(path: string | null | undefined): string | null {
+  if (!path) return null
+  if (path.startsWith('http')) return path
+  return `${getMediaBaseUrl()}${path.startsWith('/') ? '' : '/'}${path}`
+}
+
 export interface BackendAuctionItem {
   item_id: number
   catalogo_id: number
@@ -155,6 +167,75 @@ export interface BackendBidRow {
   cliente_id: number
   numero_postor: number
   subasta_id: number
+}
+
+/** Archivo (foto/scan) listo para subir vía multipart. */
+export interface UploadFile {
+  uri: string
+  name: string
+  type: string
+}
+
+export interface SubmitSellRequestBody {
+  title: string
+  description?: string
+  historia?: string
+}
+
+export interface BackendSellRequestResult {
+  id: number
+  message: string
+}
+
+export type SellRequestEstado =
+  | 'pending'
+  | 'reviewing'
+  | 'conditions_offered'
+  | 'accepted'
+  | 'rejected_by_company'
+  | 'conditions_rejected'
+  | 'returning'
+  | 'returned'
+
+export interface BackendSellRequest {
+  id: number
+  duenio_id: number
+  producto_id: number | null
+  titulo: string
+  descripcion: string | null
+  estado: SellRequestEstado
+  precio_base: string | null
+  comision_porcentaje: string | null
+  moneda: string | null
+  created_at: string
+  updated_at: string
+  historia: string | null
+  declaracion_origen_url: string | null
+  rechazo_motivo: string | null
+  rechazo_por: string | null
+  rechazo_at: string | null
+  return_amount: string | null
+  return_carrier: string | null
+  return_eta: string | null
+}
+
+export interface BackendSellRequestImage {
+  id: number
+  url: string
+  orden: number
+}
+
+export interface BackendSellRequestDetail extends BackendSellRequest {
+  condiciones_notas: string | null
+  condiciones_offered_at: string | null
+  images: BackendSellRequestImage[]
+}
+
+export interface BackendSellRequestList {
+  items: BackendSellRequest[]
+  total: number
+  page: number
+  limit: number
 }
 
 async function request<T>(path: string, init?: RequestInit, token?: string): Promise<T> {
@@ -249,6 +330,39 @@ const mockApi = {
   registerAcceptConditions: (_userId: number) => delay({ message: 'Condiciones aceptadas' }),
   checkApprovalStatus: (_email: string) =>
     delay<{ userId: number; admissionStatus: string }>({ userId: 1, admissionStatus: 'approved' }),
+  submitSellRequest: (
+    _token: string,
+    _body: SubmitSellRequestBody,
+    _images: UploadFile[],
+    _ownership: UploadFile,
+  ) => delay<BackendSellRequestResult>({ id: 1, message: 'Solicitud de venta creada' }),
+  getMySellRequests: (_token: string) =>
+    delay<BackendSellRequestList>({ items: [], total: 0, page: 1, limit: 20 }),
+  getSellRequestDetail: (_token: string, id: number) =>
+    delay<BackendSellRequestDetail>({
+      id,
+      duenio_id: 1,
+      producto_id: null,
+      titulo: 'Artículo de ejemplo',
+      descripcion: 'Descripción de ejemplo',
+      estado: 'pending',
+      precio_base: null,
+      comision_porcentaje: null,
+      moneda: null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      historia: null,
+      declaracion_origen_url: null,
+      rechazo_motivo: null,
+      rechazo_por: null,
+      rechazo_at: null,
+      return_amount: null,
+      return_carrier: null,
+      return_eta: null,
+      condiciones_notas: null,
+      condiciones_offered_at: null,
+      images: [],
+    }),
 }
 
 const realApi = {
@@ -341,6 +455,38 @@ const realApi = {
   getMyMetrics: (token: string) => request<BackendMetrics>('/users/me/metrics', undefined, token),
   getNotifications: (token: string) => request<BackendNotification[]>('/notifications', undefined, token),
   getPaymentMethods: (token: string) => request<BackendPaymentMethod[]>('/payment-methods', undefined, token),
+
+  // POST /v1/sell/request — multipart: ≥6 imágenes + declaración de titularidad.
+  submitSellRequest: async (
+    token: string,
+    body: SubmitSellRequestBody,
+    images: UploadFile[],
+    ownership: UploadFile,
+  ) => {
+    const form = new FormData()
+    form.append('title', body.title)
+    if (body.description) form.append('description', body.description)
+    if (body.historia) form.append('historia', body.historia)
+    images.forEach((img) => form.append('images', img as any))
+    form.append('ownershipDeclaration', ownership as any)
+
+    const response = await fetch(`${getApiBaseUrl()}/sell/request`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    })
+    const payload = await response.json()
+    if (!response.ok) throw new Error(payload?.message ?? 'Error creando la solicitud de venta')
+    return payload as BackendSellRequestResult
+  },
+
+  // GET /v1/sell/my-requests — solicitudes de venta del usuario logueado.
+  getMySellRequests: (token: string) =>
+    request<BackendSellRequestList>('/sell/my-requests', undefined, token),
+
+  // GET /v1/sell/my-requests/:id — detalle con imágenes.
+  getSellRequestDetail: (token: string, id: number) =>
+    request<BackendSellRequestDetail>(`/sell/my-requests/${id}`, undefined, token),
 }
 
 export const api = MOCK_MODE ? mockApi : realApi
