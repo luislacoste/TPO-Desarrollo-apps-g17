@@ -10,7 +10,7 @@
 --   * Typos corregidos: `incativo` → `inactivo`, `carrada` → `cerrada`,
 --     `verificaci?nFinanciera/Judicial` → `verificacion_financiera/judicial`,
 --     `varchar(30) not null.` → `,`.
---   * Enum `categoria` queda como `bronce/plata/oro/platino`.
+--   * Enum `categoria`: comun/especial/plata/oro/platino (determina a qué subastas accede el cliente).
 --   * Identificadores en minúscula (PG los pliega así por defecto).
 -- =====================================================================
 
@@ -99,7 +99,7 @@ CREATE TABLE clientes (
     identificador INT         NOT NULL,
     numeropais    INT,
     admitido      VARCHAR(2)  CHECK (admitido IN ('si', 'no')),
-    categoria     VARCHAR(10) CHECK (categoria IN ('bronce', 'plata', 'oro', 'platino')),
+    categoria     VARCHAR(10) CHECK (categoria IN ('comun', 'especial', 'plata', 'oro', 'platino')),
     verificador   INT         NOT NULL,
     CONSTRAINT pk_clientes        PRIMARY KEY (identificador),
     CONSTRAINT fk_clientes_personas  FOREIGN KEY (identificador) REFERENCES personas (identificador),
@@ -150,7 +150,7 @@ CREATE TABLE subastas (
     -- Características del lugar.
     tienedeposito      VARCHAR(2) CHECK (tienedeposito IN ('si', 'no')),
     seguridadpropia    VARCHAR(2) CHECK (seguridadpropia IN ('si', 'no')),
-    categoria          VARCHAR(10) CHECK (categoria IN ('bronce', 'plata', 'oro', 'platino')),
+    categoria          VARCHAR(10) CHECK (categoria IN ('comun', 'especial', 'plata', 'oro', 'platino')),
     -- Una subasta no puede ser bimonetaria. Default ARS para compatibilidad.
     moneda             VARCHAR(10) NOT NULL DEFAULT 'ARS' CHECK (moneda IN ('ARS', 'USD')),
     CONSTRAINT fk_subastas_subastadores FOREIGN KEY (subastador) REFERENCES subastadores (identificador)
