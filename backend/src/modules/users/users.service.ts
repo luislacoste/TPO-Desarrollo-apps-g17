@@ -6,6 +6,16 @@ import * as repo from './users.repository';
 import { findCategoryById, nextCategory } from '../categories/categories.service';
 import { NotFound, UnprocessableEntity } from '../../utils/errors';
 
+/**
+ * Texto de las condiciones de la empresa que el cliente debe aceptar.
+ * Estático por ahora; se devuelve en GET /users/me como `companyConditions`.
+ */
+export const COMPANY_CONDITIONS =
+  'Al participar en las subastas organizadas por esta empresa, usted acepta cumplir ' +
+  'con todas las normas y reglamentos vigentes. Sus datos personales serán tratados ' +
+  'conforme a la política de privacidad. El incumplimiento puede resultar en la suspensión ' +
+  'de su cuenta. La categoría asignada determina las subastas a las que puede acceder.';
+
 // ─── Tipos de respuesta (mapeo del MeRow al shape del swagger) ────────
 
 export interface MeResponse {
@@ -27,6 +37,8 @@ export interface MeResponse {
   bidsBlocked: boolean;
   bidsBlockedReason: string | null;
   bidsBlockedUntil: Date | null;
+  conditionsAccepted: boolean;
+  companyConditions: string;
   createdAt: Date;
   updatedAt: Date | null;
 }
@@ -51,9 +63,18 @@ function toMeResponse(row: repo.MeRow): MeResponse {
     bidsBlocked: row.bids_blocked ?? false,
     bidsBlockedReason: row.bids_blocked_reason,
     bidsBlockedUntil: row.bids_blocked_until,
+    conditionsAccepted: row.conditions_accepted_at != null,
+    companyConditions: COMPANY_CONDITIONS,
     createdAt: row.created_at,
     updatedAt: row.perfil_updated_at,
   };
+}
+
+/** POST /users/me/conditions/accept — el cliente logueado acepta las condiciones. */
+export async function acceptConditions(clienteId: number): Promise<{ message: string }> {
+  const ok = await repo.markConditionsAccepted(clienteId);
+  if (!ok) throw new NotFound('Usuario no encontrado');
+  return { message: 'Condiciones aceptadas' };
 }
 
 // ─── Casos de uso ─────────────────────────────────────────────────────

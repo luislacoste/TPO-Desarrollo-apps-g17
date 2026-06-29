@@ -31,6 +31,7 @@ export interface MeRow {
   bids_blocked: boolean | null;
   bids_blocked_reason: string | null;
   bids_blocked_until: Date | null;
+  conditions_accepted_at: Date | null;
   created_at: Date;
   perfil_updated_at: Date | null;
 }
@@ -67,6 +68,7 @@ export async function findMe(clienteId: number): Promise<MeRow | null> {
         COALESCE(cprt.bids_blocked, FALSE)     AS bids_blocked,
         cprt.bids_blocked_reason               AS bids_blocked_reason,
         cprt.bids_blocked_until                AS bids_blocked_until,
+        cp.conditions_accepted_at              AS conditions_accepted_at,
         cc.created_at                          AS created_at,
         cp.updated_at                          AS perfil_updated_at
        FROM clientes_credenciales      cc
@@ -78,6 +80,35 @@ export async function findMe(clienteId: number): Promise<MeRow | null> {
   LEFT JOIN paises                     pa   ON pa.numero        = c.numeropais
       WHERE cc.cliente_id = $1`,
     [clienteId],
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Marca las condiciones de la empresa como aceptadas para un cliente.
+ * Devuelve true si actualizó una fila de perfil.
+ */
+export async function markConditionsAccepted(clienteId: number): Promise<boolean> {
+  const { rowCount } = await query(
+    `UPDATE clientes_perfil
+        SET conditions_accepted_at = NOW(), updated_at = NOW()
+      WHERE cliente_id = $1`,
+    [clienteId],
+  );
+  return (rowCount ?? 0) > 0;
+}
+
+/** Busca el cliente y su estado de admisión por email (para check de estado). */
+export async function findStatusByEmail(
+  email: string,
+): Promise<{ cliente_id: number; admision_estado: string | null } | null> {
+  const { rows } = await query<{ cliente_id: number; admision_estado: string | null }>(
+    `SELECT cc.cliente_id           AS cliente_id,
+            ca.estado               AS admision_estado
+       FROM clientes_credenciales cc
+  LEFT JOIN clientes_admision     ca ON ca.cliente_id = cc.cliente_id
+      WHERE cc.email = $1`,
+    [email],
   );
   return rows[0] ?? null;
 }

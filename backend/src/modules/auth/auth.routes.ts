@@ -25,6 +25,8 @@ router.post(
 );
 
 router.post('/register/complete', asyncHandler(ctrl.registerComplete));
+router.post('/register/accept-conditions', asyncHandler(ctrl.registerAcceptConditions));
+router.post('/check-status',      asyncHandler(ctrl.checkStatus));
 router.post('/forgot-password',   asyncHandler(ctrl.forgotPassword));
 router.post('/refresh-token',     asyncHandler(ctrl.refreshToken));
 

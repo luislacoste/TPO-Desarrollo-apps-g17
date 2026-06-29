@@ -14,5 +14,6 @@ router.get('/me',          asyncHandler(ctrl.getMe));
 router.put('/me',          asyncHandler(ctrl.updateMe));
 router.get('/me/metrics',  asyncHandler(ctrl.getMyMetrics));
 router.get('/me/category', asyncHandler(ctrl.getMyCategory));
+router.post('/me/conditions/accept', asyncHandler(ctrl.acceptConditions));
 
 export default router;

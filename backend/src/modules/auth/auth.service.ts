@@ -11,6 +11,7 @@
  */
 import { withTransaction } from '../../db';
 import * as repo from './auth.repository';
+import * as usersRepo from '../users/users.repository';
 import { hashPassword, hashToken, randomToken, verifyPassword } from '../../services/hash';
 import { signAccessToken } from '../../services/jwt';
 import { env } from '../../config/env';
@@ -184,6 +185,30 @@ export async function registerComplete(userId: number, password: string) {
     throw new NotFound('Usuario no encontrado');
   }
   return { message: 'Registro completado' };
+}
+
+/**
+ * POST /auth/register/accept-conditions
+ * Durante el registro (sin login), el usuario acepta las condiciones de la
+ * empresa. Se identifica por `userId` (= cliente_id devuelto en el step 1).
+ */
+export async function registerAcceptConditions(userId: number): Promise<{ message: string }> {
+  const ok = await usersRepo.markConditionsAccepted(userId);
+  if (!ok) throw new NotFound('Usuario no encontrado');
+  return { message: 'Condiciones aceptadas' };
+}
+
+/**
+ * POST /auth/check-status
+ * Devuelve el estado de admisión de un usuario por email (para la pantalla
+ * de "pendiente de aprobación", que se consulta sin login).
+ */
+export async function checkStatus(
+  email: string,
+): Promise<{ userId: number; admissionStatus: string | null }> {
+  const row = await usersRepo.findStatusByEmail(email);
+  if (!row) throw new NotFound('No existe una cuenta con ese email');
+  return { userId: row.cliente_id, admissionStatus: row.admision_estado };
 }
 
 /**

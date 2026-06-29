@@ -59,6 +59,8 @@ CREATE TABLE clientes_perfil (
     document_front_url  TEXT,
     document_back_url   TEXT,
     document_verified   BOOLEAN NOT NULL DEFAULT FALSE,
+    -- Fecha en que el cliente aceptó las condiciones de la empresa (NULL = no aceptó)
+    conditions_accepted_at TIMESTAMPTZ,
     updated_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_perfil_clientes FOREIGN KEY (cliente_id) REFERENCES clientes (identificador) ON DELETE CASCADE
 );
