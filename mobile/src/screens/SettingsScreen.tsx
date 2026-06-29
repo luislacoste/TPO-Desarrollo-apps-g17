@@ -9,7 +9,6 @@ interface Props { navigation: any }
 export default function SettingsScreen({ navigation }: Props) {
   const [notifications, setNotifications] = useState(true)
   const [bidAlerts, setBidAlerts] = useState(true)
-  const [darkMode, setDarkMode] = useState(false)
 
   return (
     <SafeAreaView style={styles.root}>
@@ -47,16 +46,6 @@ export default function SettingsScreen({ navigation }: Props) {
 
         <Text style={styles.sectionLabel}>APARIENCIA</Text>
         <View style={styles.group}>
-          <View style={styles.row}>
-            <View style={[styles.iconWrap, { backgroundColor: '#F5F5F5' }]}>
-              <Feather name="moon" size={18} color="#0A0A0A" />
-            </View>
-            <View style={styles.rowText}>
-              <Text style={styles.rowTitle}>Modo oscuro</Text>
-              <Text style={styles.rowSub}>Cambia el tema de la app</Text>
-            </View>
-            <Switch value={darkMode} onValueChange={setDarkMode} trackColor={{ true: '#146C94' }} />
-          </View>
           <View style={[styles.row, styles.rowLast]}>
             <View style={[styles.iconWrap, { backgroundColor: '#F5F5F5' }]}>
               <Feather name="globe" size={18} color="#0A0A0A" />

@@ -10,7 +10,6 @@ import {
   ScrollView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import BottomNav, { NavItem } from "../components/BottomNav";
 import AuctionCard from "../components/AuctionCard";
 import CategoryBadge from "../components/CategoryBadge";
 import { UiCategory, useAppData } from "../context/AppContext";
@@ -24,23 +23,20 @@ const STATUS_TABS: { id: FilterStatus; label: string }[] = [
   { id: "ended", label: "Finalizadas" },
 ];
 
-const CATEGORIES: UiCategory[] = ["bronce", "plata", "oro", "platino"];
+const CATEGORIES: UiCategory[] = ["comun", "especial", "plata", "oro", "platino"];
 
 interface Props {
   navigation: any;
 }
 
 export default function CatalogScreen({ navigation }: Props) {
-  const { allAuctions, notifications, loading, error, refreshPublicData } =
-    useAppData();
+  const { allAuctions, loading, error, refreshPublicData } = useAppData();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<UiCategory | null>(
     null,
   );
   const [selectedStatus, setSelectedStatus] = useState<FilterStatus>("all");
   const [showFilters, setShowFilters] = useState(false);
-
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   const filtered = allAuctions.filter((a) => {
     const matchesSearch =
@@ -52,18 +48,6 @@ export default function CatalogScreen({ navigation }: Props) {
       selectedStatus === "all" || a.status === selectedStatus;
     return matchesSearch && matchesCategory && matchesStatus;
   });
-
-  const handleNavigate = (item: NavItem) => {
-    navigation.navigate(
-      item === "home"
-        ? "Home"
-        : item === "catalog"
-          ? "Catalog"
-          : item === "notifications"
-            ? "Notifications"
-            : "Profile",
-    );
-  };
 
   return (
     <SafeAreaView style={styles.root}>
@@ -218,11 +202,6 @@ export default function CatalogScreen({ navigation }: Props) {
         }
       />
 
-      <BottomNav
-        active="catalog"
-        onNavigate={handleNavigate}
-        notificationCount={unreadCount}
-      />
     </SafeAreaView>
   );
 }

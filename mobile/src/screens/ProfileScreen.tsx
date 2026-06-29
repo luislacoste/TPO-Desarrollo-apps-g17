@@ -8,9 +8,8 @@ import {
   SafeAreaView,
 } from "react-native";
 import { Feather } from "@expo/vector-icons";
-import BottomNav, { NavItem } from "../components/BottomNav";
 import CategoryBadge from "../components/CategoryBadge";
-import { useAppData } from "../context/AppContext";
+import { useAppData, UiCategory } from "../context/AppContext";
 
 function formatCurrency(amount: number, currency: string = "ARS") {
   return new Intl.NumberFormat("es-AR", {
@@ -29,27 +28,15 @@ const MENU_ITEMS = [
   { icon: "credit-card", label: "Medios de Pago", screen: "Payments" },
   { icon: "package", label: "Mis Articulos", screen: null },
   { icon: "heart", label: "Favoritos", screen: null },
+  { icon: "settings", label: "Configuracion", screen: "Settings" },
 ];
 
 export default function ProfileScreen({ navigation }: Props) {
-  const { me, metrics, notifications, logout } = useAppData();
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const { me, metrics, logout } = useAppData();
   const successRate =
     metrics && metrics.totalAuctions > 0
       ? ((metrics.wonAuctions / metrics.totalAuctions) * 100).toFixed(0)
       : "0";
-
-  const handleNavigate = (item: NavItem) => {
-    navigation.navigate(
-      item === "home"
-        ? "Home"
-        : item === "catalog"
-          ? "Catalog"
-          : item === "notifications"
-            ? "Notifications"
-            : "Profile",
-    );
-  };
 
   return (
     <SafeAreaView style={styles.root}>
@@ -79,7 +66,7 @@ export default function ProfileScreen({ navigation }: Props) {
                 <Text style={styles.userEmail}>{me?.email ?? ""}</Text>
                 <View style={{ marginTop: 6 }}>
                   <CategoryBadge
-                    category={me?.category ?? "bronce"}
+                    category={me?.category ?? "comun"}
                     size="sm"
                   />
                 </View>
@@ -209,11 +196,6 @@ export default function ProfileScreen({ navigation }: Props) {
         <View style={{ height: 16 }} />
       </ScrollView>
 
-      <BottomNav
-        active="profile"
-        onNavigate={handleNavigate}
-        notificationCount={unreadCount}
-      />
     </SafeAreaView>
   );
 }
