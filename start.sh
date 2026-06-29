@@ -2,7 +2,8 @@
 # Levanta la app de SubastAR (frontend + backend).
 # Uso:
 #   ./start.sh           → arranca normalmente
-#   ./start.sh --reset   → wipe DB + re-aplica schemas + seeds, luego arranca
+#   ./start.sh --reset   → BD de 0: recrea schema + seed admin + seed demo,
+#                          luego arranca (todo el sistema nuevo)
 #
 # En el primer arranque:
 #   - crea backend/.env con el usuario de Postgres del sistema
@@ -139,14 +140,16 @@ ensure_database() {
 # ─── Reset opcional ────────────────────────────────────────────────────────────
 
 reset_database() {
-  log "Reseteando base de datos..."
+  log "Reseteando base de datos desde cero..."
   setup_backend_env
   ensure_postgres
+  ensure_database   # crea la DB si no existe (instalación de 0)
 
   pushd "$ROOT/backend" >/dev/null
   [ ! -d "node_modules" ] && npm install --silent
-  npm run db:reset --silent  && log "Schema aplicado."
-  npm run seed:admin --silent && log "Admin creado."
+  npm run db:reset   --silent && log "Schema aplicado (tablas recreadas)."
+  npm run seed:admin --silent && log "Admin creado (admin@subastar.local / admin123)."
+  npm run seed:demo  --silent && log "Datos demo cargados (subastas, ítems, pagos…)."
   popd >/dev/null
 }
 
