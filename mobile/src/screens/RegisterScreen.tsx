@@ -20,7 +20,7 @@ interface Props {
   navigation: any
 }
 
-type Step = 1 | 2 | 3 | 4 | 5
+type Step = 1 | 2
 
 interface DocFile {
   uri: string
@@ -31,9 +31,6 @@ interface DocFile {
 const STEPS = [
   { id: 1, title: 'Datos Personales', icon: 'user' },
   { id: 2, title: 'Documento', icon: 'file' },
-  { id: 3, title: 'Verificacion', icon: 'check-circle' },
-  { id: 4, title: 'Contrasena', icon: 'lock' },
-  { id: 5, title: 'Medio de Pago', icon: 'credit-card' },
 ]
 
 export default function RegisterScreen({ navigation }: Props) {
@@ -51,8 +48,6 @@ export default function RegisterScreen({ navigation }: Props) {
     email: '',
     address: '',
     country: 'Argentina',
-    password: '',
-    confirmPassword: '',
   })
   const [docFront, setDocFront] = useState<DocFile | null>(null)
   const [docBack, setDocBack] = useState<DocFile | null>(null)
@@ -83,14 +78,6 @@ export default function RegisterScreen({ navigation }: Props) {
         return false
       }
     }
-    if (currentStep === 4) {
-      const errors: Record<string, string> = {}
-      if (formData.password.length < 8) errors.password = 'Debe tener al menos 8 caracteres'
-      else if (!/[A-Z]/.test(formData.password)) errors.password = 'Debe incluir al menos una mayuscula'
-      else if (!/[0-9]/.test(formData.password)) errors.password = 'Debe incluir al menos un numero'
-      if (formData.password !== formData.confirmPassword) errors.confirmPassword = 'Las contrasenas no coinciden'
-      if (Object.keys(errors).length > 0) { setFieldErrors(errors); return false }
-    }
     return true
   }
 
@@ -112,26 +99,17 @@ export default function RegisterScreen({ navigation }: Props) {
         setCurrentStep(2)
         setFieldErrors({})
 
-      } else if (currentStep === 2) {
+      } else {
         if (!userId || !docFront || !docBack) return
         await api.registerDocument(
           userId,
           { uri: docFront.uri, name: docFront.fileName, type: docFront.mimeType },
           { uri: docBack.uri, name: docBack.fileName, type: docBack.mimeType },
         )
-        setCurrentStep(3)
-
-      } else if (currentStep === 3) {
-        setCurrentStep(4)
-
-      } else if (currentStep === 4) {
-        if (!userId) return
-        await api.registerComplete(userId, formData.password)
-        setCurrentStep(5)
-        setFieldErrors({})
-
-      } else {
-        navigation.replace('Login')
+        navigation.replace('CompanyConditions', {
+          userId,
+          email: formData.email.trim().toLowerCase(),
+        })
       }
     } catch (err: any) {
       setApiError(err?.message ?? 'Error inesperado. Intentá de nuevo.')
@@ -255,68 +233,6 @@ export default function RegisterScreen({ navigation }: Props) {
           </View>
         )
 
-      case 3:
-        return (
-          <View style={[styles.stepContent, styles.centerContent]}>
-            <View style={styles.pendingCircle}>
-              <Feather name="check-circle" size={48} color="#D97706" />
-            </View>
-            <Text style={styles.pendingTitle}>En revision</Text>
-            <Text style={styles.pendingDesc}>
-              Tu documentacion esta siendo verificada. Te notificaremos cuando tu cuenta sea aprobada.
-            </Text>
-            <View style={styles.statusCard}>
-              <View style={styles.statusRow}>
-                <Text style={styles.statusKey}>Estado:</Text>
-                <Text style={[styles.statusVal, { color: '#D97706' }]}>Pendiente de revision</Text>
-              </View>
-              <View style={styles.statusRow}>
-                <Text style={styles.statusKey}>Tiempo estimado:</Text>
-                <Text style={styles.statusVal}>24-48 horas</Text>
-              </View>
-            </View>
-          </View>
-        )
-
-      case 4: {
-        const hasLength = formData.password.length >= 8
-        const hasUpper = /[A-Z]/.test(formData.password)
-        const hasNumber = /[0-9]/.test(formData.password)
-        const passwordsMatch = formData.confirmPassword.length > 0 && formData.password === formData.confirmPassword
-        return (
-          <View style={styles.stepContent}>
-            <Text style={styles.stepHelp}>Crea una contrasena segura para tu cuenta</Text>
-            <FieldInput icon="lock" label="Contrasena" placeholder="Minimo 8 caracteres"
-              value={formData.password} onChangeText={v => update('password', v)}
-              secure error={fieldErrors.password} />
-            <FieldInput icon="lock" label="Confirmar contrasena" placeholder="Repite tu contrasena"
-              value={formData.confirmPassword} onChangeText={v => update('confirmPassword', v)}
-              secure error={fieldErrors.confirmPassword} />
-            <View style={styles.requirements}>
-              <Text style={styles.reqTitle}>La contrasena debe tener:</Text>
-              <Requirement met={hasLength} text="Minimo 8 caracteres" />
-              <Requirement met={hasUpper} text="Una letra mayuscula" />
-              <Requirement met={hasNumber} text="Un numero" />
-              <Requirement met={passwordsMatch} text="Las contrasenas coinciden" />
-            </View>
-          </View>
-        )
-      }
-
-      case 5:
-        return (
-          <View style={styles.stepContent}>
-            <Text style={styles.stepHelp}>
-              Agrega un medio de pago para participar en subastas
-            </Text>
-            <PayOption icon="credit-card" title="Tarjeta de Credito" sub="Visa, Mastercard, Amex" color="#1D4ED8" bg="#DBEAFE" />
-            <PayOption icon="home" title="Cuenta Bancaria" sub="Transferencia directa" color="#15803D" bg="#DCFCE7" />
-            <PayOption icon="file-text" title="Cheque Certificado" sub="Para montos elevados" color="#B45309" bg="#FEF3C7" />
-            <Text style={styles.payNote}>
-              Podras agregar mas medios de pago desde tu perfil
-            </Text>
-          </View>
-        )
     }
   }
 
@@ -330,7 +246,7 @@ export default function RegisterScreen({ navigation }: Props) {
           </TouchableOpacity>
           <View>
             <Text style={styles.headerTitle}>Crear Cuenta</Text>
-            <Text style={styles.headerSub}>Paso {currentStep} de 5</Text>
+            <Text style={styles.headerSub}>Paso {currentStep} de 2</Text>
           </View>
         </View>
         <View style={styles.progressWrap}>
@@ -370,7 +286,7 @@ export default function RegisterScreen({ navigation }: Props) {
             : (
               <>
                 <Text style={styles.continueBtnText}>
-                  {currentStep === 5 ? 'Finalizar Registro' : 'Continuar'}
+                  {currentStep === 2 ? 'Ver condiciones' : 'Continuar'}
                 </Text>
                 <Feather name="arrow-right" size={18} color="#FFFFFF" />
               </>
@@ -411,29 +327,6 @@ function FieldInput({
   )
 }
 
-function Requirement({ met, text }: { met: boolean; text: string }) {
-  return (
-    <View style={req.row}>
-      <View style={[req.dot, { backgroundColor: met ? '#16A34A' : '#A3A3A3' }]} />
-      <Text style={[req.text, met && { color: '#16A34A' }]}>{text}</Text>
-    </View>
-  )
-}
-
-function PayOption({ icon, title, sub, color, bg }: { icon: string; title: string; sub: string; color: string; bg: string }) {
-  return (
-    <TouchableOpacity style={po.wrap} activeOpacity={0.8}>
-      <View style={[po.iconBox, { backgroundColor: bg }]}>
-        <Feather name={icon as any} size={22} color={color} />
-      </View>
-      <View style={po.text}>
-        <Text style={po.title}>{title}</Text>
-        <Text style={po.sub}>{sub}</Text>
-      </View>
-      <Feather name="arrow-right" size={18} color="#737373" />
-    </TouchableOpacity>
-  )
-}
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
 
@@ -487,9 +380,6 @@ const styles = StyleSheet.create({
   statusRow: { flexDirection: 'row', justifyContent: 'space-between' },
   statusKey: { fontSize: 13, color: '#737373' },
   statusVal: { fontSize: 13, fontWeight: '500', color: '#0A0A0A' },
-  requirements: { gap: 6 },
-  reqTitle: { fontSize: 12, color: '#737373' },
-  payNote: { fontSize: 12, color: '#737373', textAlign: 'center', marginTop: 8 },
   footer: {
     padding: 16, borderTopWidth: 1, borderTopColor: '#E5E5E5',
     backgroundColor: '#FFFFFF', gap: 8,
@@ -516,19 +406,3 @@ const fi = StyleSheet.create({
   errorText: { fontSize: 12, color: '#EF4444' },
 })
 
-const req = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dot: { width: 6, height: 6, borderRadius: 3 },
-  text: { fontSize: 12, color: '#737373' },
-})
-
-const po = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14,
-    borderRadius: 14, borderWidth: 1, borderColor: '#E5E5E5', backgroundColor: '#FFFFFF',
-  },
-  iconBox: { width: 46, height: 46, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
-  text: { flex: 1 },
-  title: { fontSize: 14, fontWeight: '600', color: '#0A0A0A' },
-  sub: { fontSize: 12, color: '#737373' },
-})

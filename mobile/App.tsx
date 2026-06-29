@@ -19,11 +19,17 @@ import PaymentsScreen from "./src/screens/PaymentsScreen";
 import AuctionLiveScreen from "./src/screens/AuctionLiveScreen";
 import ItemDetailScreen from "./src/screens/ItemDetailScreen";
 import SettingsScreen from "./src/screens/SettingsScreen";
+import CompanyConditionsScreen from "./src/screens/CompanyConditionsScreen";
+import PendingApprovalScreen from "./src/screens/PendingApprovalScreen";
+import SetPasswordScreen from "./src/screens/SetPasswordScreen";
 
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
   Register: undefined;
+  CompanyConditions: { userId: number; email: string };
+  PendingApproval: { userId?: number; email?: string };
+  SetPassword: { userId: number };
   Main: undefined;
   Payments: undefined;
   AuctionLive: { auctionId: string };
@@ -93,6 +99,9 @@ export default function App() {
               <Stack.Screen name="Splash" component={SplashScreen} />
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Register" component={RegisterScreen} />
+              <Stack.Screen name="CompanyConditions" component={CompanyConditionsScreen} />
+              <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
+              <Stack.Screen name="SetPassword" component={SetPasswordScreen} />
               <Stack.Screen name="Main" component={MainTabs} />
               <Stack.Screen name="Payments" component={PaymentsScreen} />
               <Stack.Screen name="AuctionLive" component={AuctionLiveScreen} />

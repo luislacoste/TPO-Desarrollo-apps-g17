@@ -152,6 +152,15 @@ export default function LoginScreen({ navigation }: Props) {
               <Text style={styles.registerLink}>Registrate</Text>
             </TouchableOpacity>
           </View>
+
+          {/* Link para usuarios aprobados sin contraseña */}
+          <TouchableOpacity
+            style={styles.approvalWrap}
+            onPress={() => navigation.navigate("PendingApproval")}
+          >
+            <Feather name="check-circle" size={14} color="#146C94" />
+            <Text style={styles.approvalText}>¿Ya fuiste aprobado? Configurá tu contraseña</Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -231,4 +240,12 @@ const styles = StyleSheet.create({
   },
   registerText: { fontSize: 14, color: "#737373" },
   registerLink: { fontSize: 14, fontWeight: "600", color: "#146C94" },
+  approvalWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    marginTop: 4,
+  },
+  approvalText: { fontSize: 13, color: "#146C94" },
 });

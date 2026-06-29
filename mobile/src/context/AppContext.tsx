@@ -66,8 +66,10 @@ type AppContextValue = {
   authLoading: boolean;
   error: string | null;
   loginError: string | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<BackendMe>;
   logout: () => void;
+  acceptConditions: (token: string) => Promise<void>;
+  rejectConditions: (token: string) => Promise<void>;
   refreshPublicData: () => Promise<void>;
   refreshPrivateData: () => Promise<void>;
   registerStart: typeof api.registerStart;
@@ -217,7 +219,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<BackendMe> => {
     setAuthLoading(true);
     setLoginError(null);
     try {
@@ -237,6 +239,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setNotifications(notificationsData.map(mapNotification));
       setPaymentMethods(paymentMethodsData.map(mapPaymentMethod));
       await refreshPublicData();
+      return user;
     } catch (err) {
       setLoginError(
         err instanceof Error ? err.message : "No se pudo iniciar sesión",
@@ -245,6 +248,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setAuthLoading(false);
     }
+  };
+
+  const acceptConditions = async (token: string) => {
+    await api.acceptConditions(token);
+    setMe((prev) => prev ? { ...prev, conditionsAccepted: true } : prev);
+  };
+
+  const rejectConditions = async (token: string) => {
+    await api.rejectConditions(token);
   };
 
   const logout = () => {
@@ -276,6 +288,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       loginError,
       login,
       logout,
+      acceptConditions,
+      rejectConditions,
       refreshPublicData,
       refreshPrivateData,
       registerStart: api.registerStart,
