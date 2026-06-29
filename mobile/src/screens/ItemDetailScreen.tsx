@@ -6,15 +6,29 @@ import {
   ScrollView,
   StyleSheet,
   SafeAreaView,
+  ActivityIndicator,
 } from 'react-native'
 import { Feather } from '@expo/vector-icons'
-import { mockItems } from '../lib/mock-items'
+import { useAppData } from '../context/AppContext'
+import { api, BackendItemDetail } from '../lib/api'
+import { useAuctionSocket } from '../lib/useAuctionSocket'
 
 type BidStatus = 'idle' | 'success' | 'error'
 
+interface LiveItem {
+  id: string
+  title: string
+  description: string
+  basePrice: number
+  currentBid: number | undefined
+  bidCount: number
+  subastado: boolean
+  justUpdated: boolean
+}
+
 interface Props {
   navigation: any
-  route: { params: { itemId: string } }
+  route: { params: { item: LiveItem; auctionEndDate: string | null; auctionId: number } }
 }
 
 function getMinIncrement(currentBid: number): number {
@@ -24,11 +38,20 @@ function getMinIncrement(currentBid: number): number {
   return 5000
 }
 
+function secondsUntil(dateString: string | null): number {
+  if (!dateString) return 0
+  const diff = Math.floor((new Date(dateString).getTime() - Date.now()) / 1000)
+  return Math.max(0, diff)
+}
+
 function formatCountdown(seconds: number): string {
+  if (seconds <= 0) return 'Finalizada'
   const h = Math.floor(seconds / 3600)
   const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
   if (h > 0) return `${h}h ${m}m`
-  return `${m}m ${seconds % 60}s`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
 }
 
 function formatARS(amount: number): string {
@@ -36,23 +59,70 @@ function formatARS(amount: number): string {
 }
 
 export default function ItemDetailScreen({ navigation, route }: Props) {
-  const { itemId } = route.params
-  const item = mockItems.find(i => i.id === itemId) ?? mockItems[0]
-  const currentBid = item.currentBid ?? item.basePrice
-  const minIncrement = getMinIncrement(currentBid)
+  const { item, auctionEndDate, auctionId } = route.params
+  const { session } = useAppData()
 
-  const [bidAmount, setBidAmount] = useState(currentBid + minIncrement)
-  const [timeRemaining, setTimeRemaining] = useState(8100)
+  const [detail, setDetail] = useState<BackendItemDetail | null>(null)
+  const [liveBid, setLiveBid] = useState<number | undefined>(item.currentBid)
+  const [liveBidCount, setLiveBidCount] = useState(item.bidCount)
+  const [timeRemaining, setTimeRemaining] = useState(() => secondsUntil(auctionEndDate))
   const [bidStatus, setBidStatus] = useState<BidStatus>('idle')
+  const [bidLoading, setBidLoading] = useState(false)
+  const [bidError, setBidError] = useState<string | null>(null)
 
+  const currentBid = liveBid ?? item.basePrice
+  const minIncrement = getMinIncrement(currentBid)
+  const [bidAmount, setBidAmount] = useState(currentBid + minIncrement)
+
+  const { connected, lastEvent } = useAuctionSocket(auctionId)
+
+  // Fetch item detail for descripcion_completa and duenio_nombre
   useEffect(() => {
-    const timer = setInterval(() => setTimeRemaining(prev => Math.max(0, prev - 1)), 1000)
-    return () => clearInterval(timer)
-  }, [])
+    api.getItemDetail(Number(item.id), session?.accessToken).then(setDetail).catch(() => {})
+  }, [item.id, session?.accessToken])
 
-  const handleOffer = () => {
-    const success = Math.random() > 0.2
-    setBidStatus(success ? 'success' : 'error')
+  // Countdown based on real auction end date
+  useEffect(() => {
+    const timer = setInterval(() => setTimeRemaining(secondsUntil(auctionEndDate)), 1000)
+    return () => clearInterval(timer)
+  }, [auctionEndDate])
+
+  // Live bid updates via WebSocket
+  useEffect(() => {
+    if (!lastEvent) return
+    if (lastEvent.type === 'bid_placed' && lastEvent.itemId === Number(item.id)) {
+      setLiveBid(prev => Math.max(prev ?? 0, lastEvent.importe))
+      setLiveBidCount(prev => prev + 1)
+      // Keep bid amount valid against the new current bid
+      setBidAmount(prev => {
+        const newMin = lastEvent.importe + getMinIncrement(lastEvent.importe)
+        return Math.max(prev, newMin)
+      })
+    }
+    if (lastEvent.type === 'auction_ended') {
+      setTimeRemaining(0)
+    }
+  }, [lastEvent, item.id])
+
+  const handleOffer = async () => {
+    if (bidLoading) return
+    if (!session?.accessToken) {
+      setBidError('Necesitás iniciar sesión para pujar')
+      setBidStatus('error')
+      return
+    }
+    setBidLoading(true)
+    setBidError(null)
+    try {
+      await api.joinAuction(session.accessToken, auctionId)
+      await api.placeBid(session.accessToken, { itemId: Number(item.id), importe: bidAmount })
+      setBidStatus('success')
+    } catch (err: any) {
+      setBidError(err?.message ?? 'No se pudo realizar la puja')
+      setBidStatus('error')
+    } finally {
+      setBidLoading(false)
+    }
   }
 
   const quickIncrements = [minIncrement, minIncrement * 2, minIncrement * 5]
@@ -63,6 +133,8 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
   const applyQuick = (inc: number) => setBidAmount(currentBid + inc)
 
   const overCurrent = bidAmount - currentBid
+  const longDesc = detail?.descripcion_completa ?? detail?.descripcion_catalogo ?? item.description
+  const owner = detail?.duenio_nombre
 
   return (
     <SafeAreaView style={styles.root}>
@@ -85,20 +157,41 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
         {/* Image placeholder */}
         <View style={styles.imagePlaceholder}>
           <Feather name="image" size={64} color="#D4D4D4" />
+          {detail && detail.fotos_count === 0 && (
+            <Text style={styles.noPhotoText}>Sin fotos disponibles</Text>
+          )}
         </View>
 
         {/* Info section */}
         <View style={styles.infoSection}>
-          <View style={styles.bidCountRow}>
-            <Feather name="users" size={15} color="#737373" />
-            <Text style={styles.bidCountText}>{item.bidCount ?? 0} ofertas</Text>
+          <View style={styles.metaRow}>
+            <View style={styles.metaItem}>
+              <Feather name="users" size={15} color="#737373" />
+              <Text style={styles.metaText}>{liveBidCount} ofertas</Text>
+            </View>
+            {owner && (
+              <View style={styles.metaItem}>
+                <Feather name="user" size={15} color="#737373" />
+                <Text style={styles.metaText}>{owner}</Text>
+              </View>
+            )}
+            <View style={styles.metaItem}>
+              <View style={[styles.wsDot, { backgroundColor: connected ? '#16A34A' : '#D4D4D4' }]} />
+              <Text style={styles.metaText}>{connected ? 'En vivo' : 'Conectando…'}</Text>
+            </View>
           </View>
           <Text style={styles.itemTitle}>{item.title}</Text>
           <View style={styles.countdownRow}>
-            <Feather name="zap" size={18} color="#FB2C36" />
-            <Text style={styles.countdownText}>Termina en {formatCountdown(timeRemaining)}</Text>
+            <Feather name="zap" size={18} color={timeRemaining > 0 ? '#FB2C36' : '#737373'} />
+            <Text style={[styles.countdownText, timeRemaining === 0 && { color: '#737373' }]}>
+              {timeRemaining > 0 ? `Termina en ${formatCountdown(timeRemaining)}` : 'Subasta finalizada'}
+            </Text>
           </View>
-          <Text style={styles.itemDescription}>{item.longDescription ?? item.description}</Text>
+          {longDesc ? (
+            <Text style={styles.itemDescription}>{longDesc}</Text>
+          ) : (
+            <ActivityIndicator size="small" color="#D4D4D4" style={{ marginTop: 4 }} />
+          )}
         </View>
 
         {/* Current bid bar */}
@@ -108,8 +201,8 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
             <Text style={styles.bidBarValue}>{formatARS(currentBid)}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.bidBarLabel}>Incremento minimo</Text>
-            <Text style={styles.bidBarValue}>{formatARS(minIncrement)}</Text>
+            <Text style={styles.bidBarLabel}>Precio base</Text>
+            <Text style={styles.bidBarValue}>{formatARS(item.basePrice)}</Text>
           </View>
         </View>
 
@@ -153,8 +246,18 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
           </View>
 
           {/* Submit button */}
-          <TouchableOpacity style={styles.offerBtn} onPress={handleOffer} activeOpacity={0.85}>
-            <Text style={styles.offerBtnText}>Ofertar {formatARS(bidAmount)}</Text>
+          <TouchableOpacity
+            style={[styles.offerBtn, (bidLoading || item.subastado || timeRemaining === 0) && { opacity: 0.6 }]}
+            onPress={handleOffer}
+            activeOpacity={0.85}
+            disabled={item.subastado || timeRemaining === 0}
+          >
+            {bidLoading
+              ? <ActivityIndicator color="#FAFAFA" />
+              : <Text style={styles.offerBtnText}>
+                  {item.subastado ? 'Item ya subastado' : `Ofertar ${formatARS(bidAmount)}`}
+                </Text>
+            }
           </TouchableOpacity>
 
           <Text style={styles.termsText}>Al ofertar aceptas los terminos y condiciones</Text>
@@ -168,7 +271,6 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
         <View style={styles.overlay}>
           <View style={styles.overlayContent}>
 
-            {/* Icon circle */}
             <View style={[
               styles.iconCircle,
               { backgroundColor: bidStatus === 'success' ? '#DCFCE7' : '#FFC4C7' }
@@ -181,36 +283,33 @@ export default function ItemDetailScreen({ navigation, route }: Props) {
               />
             </View>
 
-            {/* Title */}
             <Text style={styles.overlayTitle}>
               {bidStatus === 'success' ? 'Oferta realizada' : 'No pudimos realizar tu oferta'}
             </Text>
 
-            {/* Subtitles */}
             {bidStatus === 'success' ? (
               <>
                 <Text style={styles.overlaySubtitle}>Tu oferta de {formatARS(bidAmount)}</Text>
                 <Text style={styles.overlaySubtitle}>por {item.title} fue registrada</Text>
               </>
             ) : (
-              <Text style={styles.overlaySubtitle}>Intente ofertar nuevamente</Text>
+              <Text style={styles.overlaySubtitle}>{bidError ?? 'Intente ofertar nuevamente'}</Text>
             )}
 
-            {/* Buttons */}
             <View style={styles.overlayButtons}>
               <TouchableOpacity
                 style={styles.primaryBtn}
-                onPress={() => navigation.goBack()}
+                onPress={() => bidStatus === 'success' ? navigation.goBack() : setBidStatus('idle')}
                 activeOpacity={0.85}
               >
                 <Text style={styles.primaryBtnText}>
-                  {bidStatus === 'success' ? 'Ver otros items de esta subasta' : 'Ver o ofertar'}
+                  {bidStatus === 'success' ? 'Ver otros items de esta subasta' : 'Intentar de nuevo'}
                 </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.secondaryBtn}
-                onPress={() => navigation.navigate('Home')}
+                onPress={() => navigation.navigate('Main')}
                 activeOpacity={0.85}
               >
                 <Text style={styles.secondaryBtnText}>Volver al inicio</Text>
@@ -262,11 +361,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F5F5',
     alignItems: 'center',
     justifyContent: 'center',
+    gap: 8,
   },
+  noPhotoText: { fontSize: 13, color: '#A3A3A3' },
 
   infoSection: { padding: 16, gap: 6 },
-  bidCountRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  bidCountText: { fontSize: 13, color: '#737373' },
+  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 16, flexWrap: 'wrap' },
+  metaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  metaText: { fontSize: 13, color: '#737373' },
+  wsDot: { width: 8, height: 8, borderRadius: 4 },
   itemTitle: { fontSize: 22, fontWeight: '700', color: '#0A0A0A', lineHeight: 28 },
   countdownRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   countdownText: { fontSize: 17, fontWeight: '700', color: '#FB2C36' },

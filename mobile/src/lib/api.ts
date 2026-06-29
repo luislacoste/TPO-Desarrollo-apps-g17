@@ -1,7 +1,7 @@
 import { NativeModules, Platform } from 'react-native'
 import Constants from 'expo-constants'
 
-export type BackendCategory = 'comun' | 'especial' | 'plata' | 'oro' | 'platino'
+export type BackendCategory = 'bronce' | 'plata' | 'oro' | 'platino'
 
 export interface AuthUser {
   id: number
@@ -129,6 +129,21 @@ export interface BackendAuctionItem {
   fotos_count: number
 }
 
+export interface BackendItemDetail {
+  id: number
+  catalogo_id: number
+  producto_id: number
+  subasta_id: number | null
+  precio_base: string | null
+  comision: string
+  subastado: 'si' | 'no' | null
+  descripcion_catalogo: string | null
+  descripcion_completa: string | null
+  fotos_count: number
+  duenio_id: number
+  duenio_nombre: string | null
+}
+
 export interface BackendBidRow {
   id: number
   importe: string
@@ -204,6 +219,21 @@ export const api = {
 
   getAuctionCatalog: (id: number) => request<BackendAuctionItem[]>(`/auctions/${id}/catalog`),
   getBidsForAuction: (id: number) => request<BackendBidRow[]>(`/bids/auction/${id}`),
+  getItemDetail: (id: number, token?: string) =>
+    request<BackendItemDetail>(`/items/${id}`, undefined, token),
+  joinAuction: (token: string, auctionId: number) =>
+    request<{ sessionId: number; asistente: { id: number; numeropostor: number }; wsUrl: string }>(
+      `/auctions/${auctionId}/join`,
+      { method: 'POST' },
+      token,
+    ),
+
+  placeBid: (token: string, body: { itemId: number; importe: number }) =>
+    request<{ id: number; itemId: number; asistenteId: number; importe: number }>(
+      '/bids',
+      { method: 'POST', body: JSON.stringify(body) },
+      token,
+    ),
 
   getActiveAuctions: () => request<BackendAuction[]>('/auctions/active'),
   getUpcomingAuctions: () => request<BackendAuction[]>('/auctions/upcoming'),

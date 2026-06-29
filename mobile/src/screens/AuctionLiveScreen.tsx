@@ -181,7 +181,7 @@ export default function AuctionLiveScreen({ navigation, route }: Props) {
           <TouchableOpacity
             key={item.id}
             style={[styles.itemCard, item.justUpdated && styles.itemCardFlash, item.subastado && styles.itemCardSold]}
-            onPress={() => navigation.navigate('ItemDetail', { itemId: item.id })}
+            onPress={() => navigation.navigate('ItemDetail', { item, auctionEndDate: auction?.endDate ?? null, auctionId: Number(auctionId) })}
             activeOpacity={0.8}
           >
             <View style={styles.itemThumb}>
