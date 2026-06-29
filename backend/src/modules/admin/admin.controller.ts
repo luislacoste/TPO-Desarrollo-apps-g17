@@ -102,6 +102,13 @@ export async function offerSellRequestConditions(req: Request, res: Response) {
   }));
 }
 
+export async function publishSellRequest(req: Request, res: Response) {
+  res.json(await svc.publishSellRequest(actorId(req), paramId(req), {
+    categoria: req.body?.categoria ? String(req.body.categoria) : undefined,
+    hora:      req.body?.hora ? String(req.body.hora) : undefined,
+  }));
+}
+
 export async function acceptAllSellRequests(req: Request, res: Response) {
   res.json(await svc.acceptAllSellRequests(actorId(req), {
     precioBase:         req.body?.precioBase !== undefined ? Number(req.body.precioBase) : undefined,

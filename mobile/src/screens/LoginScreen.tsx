@@ -28,7 +28,8 @@ export default function LoginScreen({ navigation }: Props) {
     if (!email || !password || authLoading) return;
     try {
       await login(email, password);
-      navigation.replace("Main");
+      // reset: Login deja de existir en el stack; sólo se vuelve por logout.
+      navigation.reset({ index: 0, routes: [{ name: "Main" }] });
     } catch {
       // El mensaje visible queda en el contexto.
     }

@@ -17,6 +17,7 @@ import * as sellRepo from '../sell-requests/sell-requests.repository';
 import * as paymentsRepo from '../payments/payments.repository';
 import * as auctionsRepo from '../auctions/auctions.repository';
 import { env } from '../../config/env';
+import { events } from '../../services/events';
 import { BadRequest, Conflict, NotFound, UnprocessableEntity } from '../../utils/errors';
 
 const VALID_CATEGORIES = ['comun', 'especial', 'plata', 'oro', 'platino'] as const;
@@ -322,6 +323,19 @@ export async function closeAuction(_actorId: number, subastaId: number) {
     await auctionsRepo.closeAuction(client, subastaId);
   });
 
+  // Recién acá (transacción commiteada) avisamos por WebSocket: cada ítem
+  // adjudicado y el cierre de la subasta. Los clientes en vivo reaccionan
+  // sin tener que recargar.
+  for (const a of adjudicated) {
+    events.emit('item_sold', {
+      auctionId: subastaId,
+      itemId: a.itemId,
+      clienteId: a.clienteId,
+      importe: a.importe,
+    });
+  }
+  events.emit('auction_ended', { auctionId: subastaId });
+
   return { auctionId: subastaId, estado: 'cerrada', adjudicated, skipped };
 }
 
@@ -405,6 +419,68 @@ export async function acceptAllSellRequests(
     moneda,
   });
   return { accepted: ids.length, ids };
+}
+
+/**
+ * Publica una solicitud de venta `accepted` como subasta real: crea el
+ * producto, una subasta nueva (fecha futura), su catálogo y el ítem con el
+ * precio base/comisión acordados. A partir de acá aparece en GET /auctions.
+ *
+ * Una subasta por solicitud. Idempotente-ish: si ya tiene `producto_id`,
+ * se considera publicada y se rechaza.
+ */
+export async function publishSellRequest(
+  actorId: number,
+  id: number,
+  opts: { categoria?: string; hora?: string },
+) {
+  const VALID_CATEGORIES = ['comun', 'especial', 'plata', 'oro', 'platino'];
+  const sr = await sellRepo.findById(id);
+  if (!sr) throw new NotFound('Solicitud de venta no encontrada');
+  if (sr.estado !== 'accepted') {
+    throw new Conflict(`Sólo se publica una solicitud 'accepted' (está '${sr.estado}')`);
+  }
+  if (sr.producto_id) throw new Conflict('La solicitud ya fue publicada como subasta');
+  if (sr.precio_base == null) {
+    throw new Conflict('La solicitud no tiene precio base (faltan condiciones)');
+  }
+
+  const categoria = opts.categoria ?? 'comun';
+  if (!VALID_CATEGORIES.includes(categoria)) {
+    throw new UnprocessableEntity(`Categoría inválida: ${categoria}`);
+  }
+  const hora = opts.hora ?? '12:00';
+  const moneda = (sr.moneda as 'ARS' | 'USD') ?? 'ARS';
+
+  // Fecha futura que cumple el CHECK de subastas (> hoy + 10 días).
+  const d = new Date();
+  d.setDate(d.getDate() + 15);
+  const fecha = d.toISOString().slice(0, 10);
+
+  const productoId = await auctionsRepo.insertProducto({
+    descripcion: sr.titulo,
+    duenioId: sr.duenio_id,
+    revisorId: actorId,
+  });
+  await sellRepo.setProductoId(id, productoId);
+
+  const subastaId = await auctionsRepo.insertSubasta({
+    fecha,
+    hora,
+    estado: 'abierta',
+    categoria: categoria as 'comun' | 'especial' | 'plata' | 'oro' | 'platino',
+    moneda,
+  });
+  const catalogoId = await auctionsRepo.insertCatalogo(subastaId, actorId);
+  const [itemId] = await auctionsRepo.insertItemsCatalogo(catalogoId, [
+    {
+      productoId,
+      precioBase: Number(sr.precio_base),
+      comision: Number(sr.comision_porcentaje ?? 0),
+    },
+  ]);
+
+  return { sellRequestId: id, productoId, subastaId, catalogoId, itemId };
 }
 
 // ─── Pagos (admin) ────────────────────────────────────────────────────

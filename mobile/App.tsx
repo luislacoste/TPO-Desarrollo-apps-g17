@@ -108,7 +108,11 @@ export default function App() {
               <Stack.Screen name="CompanyConditions" component={CompanyConditionsScreen} />
               <Stack.Screen name="PendingApproval" component={PendingApprovalScreen} />
               <Stack.Screen name="SetPassword" component={SetPasswordScreen} />
-              <Stack.Screen name="Main" component={MainTabs} />
+              <Stack.Screen
+                name="Main"
+                component={MainTabs}
+                options={{ gestureEnabled: false }}
+              />
               <Stack.Screen name="Payments" component={PaymentsScreen} />
               <Stack.Screen name="AuctionLive" component={AuctionLiveScreen} />
               <Stack.Screen name="ItemDetail" component={ItemDetailScreen} />

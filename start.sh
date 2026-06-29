@@ -2,8 +2,8 @@
 # Levanta la app de SubastAR (frontend + backend).
 # Uso:
 #   ./start.sh           → arranca normalmente
-#   ./start.sh --reset   → BD de 0: recrea schema + seed admin + seed demo,
-#                          luego arranca (todo el sistema nuevo)
+#   ./start.sh --reset   → BD de 0: recrea schema + seed admin (sin subastas
+#                          de ejemplo), luego arranca
 #
 # En el primer arranque:
 #   - crea backend/.env con el usuario de Postgres del sistema
@@ -149,7 +149,9 @@ reset_database() {
   [ ! -d "node_modules" ] && npm install --silent
   npm run db:reset   --silent && log "Schema aplicado (tablas recreadas)."
   npm run seed:admin --silent && log "Admin creado (admin@subastar.local / admin123)."
-  npm run seed:demo  --silent && log "Datos demo cargados (subastas, ítems, pagos…)."
+  npm run seed:users --silent && log "Cuentas de prueba: luis@gmail.com / test@gmail.com (pw 123QWE!@#)."
+  # No se siembran subastas de ejemplo: la base arranca limpia y las subastas
+  # se generan desde el flujo real (proponer venta → aprobar → publicar).
   popd >/dev/null
 }
 
