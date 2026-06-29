@@ -189,6 +189,31 @@ export async function acceptConditions(id: number) {
   return rowCount ?? 0;
 }
 
+/**
+ * Acepta en lote todas las solicitudes en estado aprobable
+ * (`pending`, `reviewing`, `conditions_offered`) → `accepted`.
+ * Completa condiciones por defecto donde falten (precio base / comisión / moneda).
+ * Devuelve los ids afectados.
+ */
+export async function acceptAllPending(defaults: {
+  precio_base: number;
+  comision_porcentaje: number;
+  moneda: string;
+}): Promise<number[]> {
+  const { rows } = await query<{ identificador: number }>(
+    `UPDATE solicitudes_venta
+        SET estado              = 'accepted',
+            precio_base         = COALESCE(precio_base, $1),
+            comision_porcentaje = COALESCE(comision_porcentaje, $2),
+            moneda              = COALESCE(moneda, $3),
+            updated_at          = NOW()
+      WHERE estado IN ('pending', 'reviewing', 'conditions_offered')
+      RETURNING identificador`,
+    [defaults.precio_base, defaults.comision_porcentaje, defaults.moneda],
+  );
+  return rows.map((r) => r.identificador);
+}
+
 export async function offerConditions(
   id: number,
   data: { precio_base: number; comision_porcentaje: number; moneda: string; notas: string | null },

@@ -44,3 +44,8 @@ export async function getMyCategory(req: Request, res: Response) {
   const cat = await svc.getMyCategory(requireClienteId(req));
   res.json(cat);
 }
+
+export async function acceptConditions(req: Request, res: Response) {
+  const result = await svc.acceptConditions(requireClienteId(req));
+  res.json(result);
+}

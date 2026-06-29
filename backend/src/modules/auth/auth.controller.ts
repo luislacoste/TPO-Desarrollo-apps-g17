@@ -97,3 +97,18 @@ export async function refreshToken(req: Request, res: Response) {
   const tokens = await svc.refreshTokens(token);
   res.status(200).json(tokens);
 }
+
+export async function registerAcceptConditions(req: Request, res: Response) {
+  const userId = Number(req.body?.userId);
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new UnprocessableEntity('userId inválido');
+  }
+  const result = await svc.registerAcceptConditions(userId);
+  res.status(200).json(result);
+}
+
+export async function checkStatus(req: Request, res: Response) {
+  const email = requireEmail(req.body?.email);
+  const result = await svc.checkStatus(email);
+  res.status(200).json(result);
+}

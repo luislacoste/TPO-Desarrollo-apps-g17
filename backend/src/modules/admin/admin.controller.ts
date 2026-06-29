@@ -102,6 +102,14 @@ export async function offerSellRequestConditions(req: Request, res: Response) {
   }));
 }
 
+export async function acceptAllSellRequests(req: Request, res: Response) {
+  res.json(await svc.acceptAllSellRequests(actorId(req), {
+    precioBase:         req.body?.precioBase !== undefined ? Number(req.body.precioBase) : undefined,
+    comisionPorcentaje: req.body?.comisionPorcentaje !== undefined ? Number(req.body.comisionPorcentaje) : undefined,
+    moneda:             req.body?.moneda !== undefined ? String(req.body.moneda) : undefined,
+  }));
+}
+
 // ─── Pagos ────────────────────────────────────────────────────────────
 
 export async function createPayment(req: Request, res: Response) {
